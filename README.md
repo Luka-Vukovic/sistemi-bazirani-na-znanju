@@ -66,16 +66,21 @@ Sistem će biti implementiran u programskom jeziku Java, uz korišćenje Drools 
 - Vremenski izveštaji
     - Brzina vetra
     - Smer vetra
+    - Komponenta bočnog vetra
     - Vidljivost
     - Temperatura
     - Vrsta padavina
     - Intenzitet padavina
     - Pojava leda
-- Status piste (otvorena, zatvorena, klizava, u održavanju)
+- Status piste 
+    - Status (otvorena, zatvorena, klizava, u održavanju)
+    - Broj pisti u odledavanju
 - Tehnički alarmi aviona
     - Tip alarma
     - Ozbiljnost (nizak, srednji, visok, kritičan)
     - Komponenta
+    - Vreme prijave alarma
+    - Status alarma
 - Status leta (na vreme, kasni n minuta, ukrcan, poleteo, sleteo, preusmeren)
 
 ### Izlazi iz sistema
@@ -101,6 +106,9 @@ IF brzina vetra > 50km/h THEN JakVetar
 IF vidljivost < 500m THEN KriticnaVidljivost
 IF temperatura < 0°C and (kiša or sneg) THEN RizikOdLeda
 IF intenzitet padavina > UMEREN THEN JakePadavine
+IF komponenta bocnog vetra > 30km/h THEN BocniVetar
+IF temperatura < -20°C THEN EkstremnaHladnoca
+IF pojavaLeda == true THEN AktivnoLedenje
 ```
 
 - Tehnički alarmi aviona
@@ -109,11 +117,28 @@ IF alarm.ozbiljnost == VISOK THEN OzbiljanAlarm
 IF alarm.ozbiljnost == KRITIČAN THEN KriticanAlarm
 ```
 
+- Podaci o avionu
+```
+IF avion.datumNarednogServisa < danas THEN ServisPrekoracen
+IF avion.starost > 20 AND avion.datumNarednogServisa < danas + 30 dana THEN AvionBlizuServisa
+IF avion.starost > 25 THEN StarAvion
+```
+
+- Posada
+```
+IF posada.kompletna == false THEN NekompletnaPostada
+IF posada.radnoVreme > 8h THEN PosadaUmorna
+IF posada.radnoVreme > 12h THEN PosadaPrekoracilaNormu
+```
+
 - Infrastruktura aerodroma
 ```
 IF pista.status == ZATVORENA THEN PistaNedostupna
 IF pista.status == KLIZAVA THEN PistaRizicna
 IF slobodniGateovi == 0 THEN NemaGateova
+IF slobodniGateovi <= 2 THEN MaloGateova
+IF raspolozivePiste == 1 THEN SamoPistaJedna
+IF (raspolozivePiste / ukupnePiste) < 0.5 THEN KriticanBrojPista
 ```
 
 #### Nivo 2 - Procena stanja sistema (agregacija zaključaka)
@@ -125,6 +150,12 @@ IF LošiVremenskiUslovi AND RizikOdLeda THEN EkstremniUslovi
 IF PistaNedostupna OR PistaRizicna THEN PistaProblem
 IF OzbiljanAlarm AND KriticanAlarm THEN TehnickiProblem
 IF TehnickiProblem AND (avion.doLeta < 72h) THEN AvionNijeSpreman
+IF BocniVetar AND (JakePadavine OR AktivnoLedenje) THEN KriticniVremenskiUslovi
+IF NekompletnaPostada OR PosadaPrekoracilaNormu THEN PostadaNijeSposobna
+IF ServisPrekoracen OR (StarAvion AND AvionBlizuServisa) THEN AvionTehničkiRizičan
+IF MaloGateova AND KriticanBrojPista THEN AerodromPodPritiskom
+IF AvionTehničkiRizičan AND LošiVremenskiUslovi THEN VisokOperativniRizik
+IF PosadaUmorna AND (LošiVremenskiUslovi OR PistaProblem) THEN BezbednostUgrozena
 ```
 
 #### Nivo 3 - Donošenje finalne odluke
@@ -133,9 +164,16 @@ Na osnovu primarnih zaključaka sa nivoa 2, generiše se preporuka akcije:
 ```
 IF EkstremniUslovi AND PistaProblem THEN Preporuka: OTKAŽI
 IF LošiVremenskiUslovi AND NOT PistaProblem THEN Preporuka: ODLOŽI
-IF AvionNijeSpreman OR PostojiZamena THEN Preporuka: ODLOŽI
+IF AvionNijeSpreman AND PostojiZamena THEN Preporuka: ODLOŽI
 IF AvionNijeSpreman AND NOT PostojiZamena THEN Preporuka: OTKAŽI
 IF NOT problemi THEN Preporuka: POLETI NA VREME
+IF PostadaNijeSposobna AND NOT PostojiZamenaPostade THEN Preporuka: OTKAŽI
+IF PostadaNijeSposobna AND PostojiZamenaPostade THEN Preporuka: ODLOŽI
+IF BezbednostUgrozena THEN Preporuka: OTKAŽI
+IF AerodromPodPritiskom AND LošiVremenskiUslovi THEN Preporuka: PREUSMERI
+IF VisokOperativniRizik THEN Preporuka: ODLOŽI
+IF EkstremnaHladnoca AND NOT AktivnoLedjenje THEN Preporuka: ODLOŽI (procedura odleđavanja)
+IF KriticniVremenskiUslovi THEN Preporuka: OTKAŽI
 ```
 
 #### CEP - Complex Event Processing
@@ -152,9 +190,12 @@ THEN KriticnoPogorsavanjeVremena
 AND ALARM: Zamrzni sva poletanja
 ```
 
-- CEP 2: Serija tehnilkih alarma na istom avionu
+- CEP 2: Serija tehničkih alarma na istom avionu
 ```
-IF COUNT(alarm.VISOK or alarm.KRITIČAN) >= 3
+IF COUNT(alarm.NIZAK) >= 5
+OR COUNT(alarm.SREDNJI) >= 3
+OR COUNT(alarm.VISOK) >= 2
+OR COUNT(alarm.KRITICAN) >= 1
 WITHIN 15 minuta
 THEN TehnickiIncident(avionId)
 AND ALARM: Povuci avion iz saobraćaja
@@ -206,6 +247,41 @@ Primer korišćenja:
 | Cargo | 70 | 1000 | 240 | 3 |
 | Privatni | 45 | 1500 | 60 | 4 |
 
+Takođe se koristi i za generisanje pravila za proveru statusa piste i određivanja da li su poletanje i sletanje dozvoljena, koji je maksimalni dozvoljeni vetar i da li je potrebno pokrenuti proceduru odleđavanja. Na primer, za status Klizava, sistem automatski ograničava maksimalnu brzinu vetra na 50 km/h i zahteva odleđavanje pre nego što se dozvoli operacija.
+
+```
+template header
+    statusPiste, dozvoljenoPoletanje, dozvoljenoSletanje,
+    maxVetar, potrebnoOdledjavanje, prioritetCiscenja
+end template
+```
+Primer korišćenja:
+
+| statusPiste | dozvoljenoPoletanje | dozvoljenoSletanje | maxVetar | potrebnoOdledjavanje | prioritetCiscenja |
+| :--- | :---: | :---: | ---: | :---: | ---: |
+| Otvorena | true | true | 70 | false | 0 |
+| Klizava | true | true | 50 | true | 1 |
+| UOdrzavanju | false | false | 0 | false | 2 |
+| Zatvorena | false | false | 0 | false | 3 |
+
+Template ispod definiše operativne procedure za svaki nivo ozbiljnosti alarma. Vrednost maxDozvoljenihAlarma direktno se koristi u CEP modulu. Kada broj aktivnih alarma istog nivoa u definisanom vremenskom prozoru premaši dozvoljeni maksimum, sistem generiše eskalaciju.
+
+```
+template header
+    ozbiljnost, maxDozvoljenihAlarma, rokReakcijeMin,
+    blokirajPoletanje, zahtevajServis
+end template
+```
+
+Primer korišćenja:
+
+| ozbiljnost | maxDozvoljenihAlarma | rokReakcijeMin | blokirajPoletanje | zahtevajServis |
+| :--- | ---: | ---: | :---: | :---: |
+| Nizak | 5 | 60 | false | false |
+| Srednji | 3 | 30 | false | true |
+| Visok | 2 | 10 | true | true |
+| Kritican | 1 | 5 | true | true |
+
 #### Backward chaining
 
 Backward chaining se koristi za odgovaranje na upite tipa "Šta je potrebno da let poleti?". Sistem unazad traži koji uslovi nisu ispunjeni:
@@ -216,6 +292,33 @@ query "usloviZaPoletanje"(Let $let)
     avionSpreman($let),
     posadaKompletna($let),
     kontrolaLetenjaOdobrila($let)
+end
+
+// pistaSpremna: pista je dostupna i bezbedna
+query "pistaSpremna"(Let $let)
+    NOT PistaNedostupna(),
+    NOT PistaRizicna(),
+    raspolozivePiste($let, $n), eval($n > 0)
+end
+
+// avionSpreman: avion je tehnički ispravan i nije prekoračio servis
+query "avionSpreman"(Let $let)
+    NOT TehnickiProblem(),
+    NOT ServisPrekoracen(),
+    NOT AvionTehničkiRizičan()
+end
+
+// posadaKompletna: posada je prisutna i u stanju da leti
+query "posadaKompletna"(Let $let)
+    NOT NekompletnaPostada(),
+    NOT PosadaPrekoracilaNormu()
+end
+
+// kontrolaLetenjaOdobrila: ATC je dao odobrenje za poletanje
+query "kontrolaLetenjaOdobrila"(Let $let)
+    NOT KriticnoPogorsavanjeVremena(),
+    NOT TehnickiIncident($let.avionId),
+    NOT AerodromPodPritiskom()
 end
 ```
 Sistem automatski utvrđuje koji od navedenih uslova nisu ispunjeni i vraća objašnjenje zašto let ne može da poleti.
@@ -230,12 +333,13 @@ Scenario: Let JU-301 Beograd -> London, planirani polazak 14:00, kategorija: Me�
     - Temperatura: -2°C
     - Vrsta padavina: kiša
 - Nivo 1
-    - INSERT JakVetar (65 > 55)
-    - INSERT KriticnaVidljivost (450 < 800)
+    - INSERT JakVetar (65 > 50)
+    - INSERT KriticnaVidljivost (450 < 500)
     - INSERT RizikOdLeda (-2°C + kiša)
 - Nivo 2
     - JakVetar + KriticnaVidljivost -> INSERT LosiVremenskiUslovi
-    - RizikOdLeda + provera piste -> INSERT PistaRizicna
+    - RizikOdLeda -> INSERT PistaRizicna
+    - PistaRizicna -> INSERT PistaProblem
 - Nivo 3
     - LosiVremenskiUslovi + PistaRizicna -> Preporuka: ODLOŽI let JU-301
 - CEP #1
@@ -247,9 +351,10 @@ Scenario: Let JU-301 Beograd -> London, planirani polazak 14:00, kategorija: Me�
     - ALARM: Zamrzni sva poletanja
 - CEP #2
     - U poslednjih 15 minuta:
-        - Prijavljen alarm nivoa VISOK (hidraulika)
-        - Prijavljen alarm nivoa VISOK (motor)
-        - Prijavljen alarm nivoa VISOK (senzor)
+        - Prijavljen alarm nivoa SREDNJI (sistem goriva) 
+        - Prijavljen alarm nivoa SREDNJI (električna instalacija)
+        - Prijavljen alarm nivoa SREDNJI (hidraulika)
+    - COUNT(alarm.SREDNJI) >= 3
     - TehnickiIncident(JU-301)
     - ALARM: Povuci avion iz saobraćaja
 - Accumulate
@@ -262,7 +367,7 @@ Scenario: Let JU-301 Beograd -> London, planirani polazak 14:00, kategorija: Me�
         - Vidljivost mora > 600m
         - Avion ima aktivne alarme
         - Posada kompletna
-        - ATC odobrenje
+        - Kontrola letenja mora da odobri
 - Izlaz
     - Finalna odluka: LET OTKAZAN - vremenski uslovi i tehnički problemi
     - Obavešteni putnici
