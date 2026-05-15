@@ -1,4 +1,4 @@
-# SISTEM ZA PODRŠKU ODLUČIVANJU PRI POLETANJU AVIONA sistem za podršku odlučivanju pri poletanju aviona
+# SISTEM ZA PODRŠKU ODLUČIVANJU PRI POLETANJU AVIONA
 
 ### Članovi tima
 Luka Vuković - SV37/2022
