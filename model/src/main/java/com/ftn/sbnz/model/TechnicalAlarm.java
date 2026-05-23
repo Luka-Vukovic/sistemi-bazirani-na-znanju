@@ -13,7 +13,7 @@ public class TechnicalAlarm implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String aircraftId;
+    private int flightNumber;
     private AlarmType alarmType;
     private String component;
     private AlarmSeverity severity;
@@ -23,10 +23,10 @@ public class TechnicalAlarm implements Serializable {
 
     public TechnicalAlarm() {}
 
-    public TechnicalAlarm(String aircraftId, AlarmType alarmType, String component,
+    public TechnicalAlarm(int flightNumber, AlarmType alarmType, String component,
                           AlarmSeverity severity, LocalDateTime reportedAt,
                           AlarmStatus status, MelCategory melCategory) {
-        this.aircraftId = aircraftId;
+        this.flightNumber = flightNumber;
         this.alarmType = alarmType;
         this.component = component;
         this.severity = severity;
@@ -35,8 +35,8 @@ public class TechnicalAlarm implements Serializable {
         this.melCategory = melCategory;
     }
 
-    public String getAircraftId() { return aircraftId; }
-    public void setAircraftId(String aircraftId) { this.aircraftId = aircraftId; }
+    public int getFlightNumber() { return flightNumber; }
+    public void setFlightNumber(int flightNumber) { this.flightNumber = flightNumber; }
 
     public AlarmType getAlarmType() { return alarmType; }
     public void setAlarmType(AlarmType alarmType) { this.alarmType = alarmType; }
@@ -61,7 +61,7 @@ public class TechnicalAlarm implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TechnicalAlarm that = (TechnicalAlarm) o;
-        return Objects.equals(aircraftId, that.aircraftId) &&
+        return flightNumber == that.flightNumber &&
                 alarmType == that.alarmType &&
                 Objects.equals(component, that.component) &&
                 severity == that.severity &&
@@ -72,13 +72,13 @@ public class TechnicalAlarm implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(aircraftId, alarmType, component, severity, reportedAt, status, melCategory);
+        return Objects.hash(flightNumber, alarmType, component, severity, reportedAt, status, melCategory);
     }
 
     @Override
     public String toString() {
         return "TechnicalAlarm{" +
-                "aircraftId='" + aircraftId + '\'' +
+                "flightNumber=" + flightNumber +
                 ", alarmType=" + alarmType +
                 ", component='" + component + '\'' +
                 ", severity=" + severity +

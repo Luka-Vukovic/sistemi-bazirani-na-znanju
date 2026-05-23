@@ -9,6 +9,7 @@ public class Recommendation implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private int flightNumber;
     private RecommendationAction action;
     private String reason;
 
@@ -18,6 +19,15 @@ public class Recommendation implements Serializable {
         this.action = action;
         this.reason = reason;
     }
+
+    public Recommendation(int flightNumber, RecommendationAction action, String reason) {
+        this.flightNumber = flightNumber;
+        this.action = action;
+        this.reason = reason;
+    }
+
+    public int getFlightNumber() { return flightNumber; }
+    public void setFlightNumber(int flightNumber) { this.flightNumber = flightNumber; }
 
     public RecommendationAction getAction() { return action; }
     public void setAction(RecommendationAction action) { this.action = action; }
@@ -30,19 +40,21 @@ public class Recommendation implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Recommendation that = (Recommendation) o;
-        return action == that.action &&
+        return flightNumber == that.flightNumber &&
+                action == that.action &&
                 Objects.equals(reason, that.reason);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(action, reason);
+        return Objects.hash(flightNumber, action, reason);
     }
 
     @Override
     public String toString() {
         return "Recommendation{" +
-                "action=" + action +
+                "flightNumber=" + flightNumber +
+                ", action=" + action +
                 ", reason='" + reason + '\'' +
                 '}';
     }

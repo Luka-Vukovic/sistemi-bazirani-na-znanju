@@ -7,6 +7,7 @@ public class Crew implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private int flightNumber;
     private boolean isComplete;
     private int fdp;
     private int restBeforeFlight;
@@ -15,14 +16,18 @@ public class Crew implements Serializable {
 
     public Crew() {}
 
-    public Crew(boolean isComplete, int fdp, int restBeforeFlight,
+    public Crew(int flightNumber, boolean isComplete, int fdp, int restBeforeFlight,
                 int sectorsToday, boolean isNightDuty) {
+        this.flightNumber = flightNumber;
         this.isComplete = isComplete;
         this.fdp = fdp;
         this.restBeforeFlight = restBeforeFlight;
         this.sectorsToday = sectorsToday;
         this.isNightDuty = isNightDuty;
     }
+
+    public int getFlightNumber() { return flightNumber; }
+    public void setFlightNumber(int flightNumber) { this.flightNumber = flightNumber; }
 
     public boolean isComplete() { return isComplete; }
     public void setComplete(boolean complete) { isComplete = complete; }
@@ -44,7 +49,8 @@ public class Crew implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Crew crew = (Crew) o;
-        return isComplete == crew.isComplete &&
+        return flightNumber == crew.flightNumber &&
+                isComplete == crew.isComplete &&
                 fdp == crew.fdp &&
                 restBeforeFlight == crew.restBeforeFlight &&
                 sectorsToday == crew.sectorsToday &&
@@ -53,13 +59,14 @@ public class Crew implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(isComplete, fdp, restBeforeFlight, sectorsToday, isNightDuty);
+        return Objects.hash(flightNumber, isComplete, fdp, restBeforeFlight, sectorsToday, isNightDuty);
     }
 
     @Override
     public String toString() {
         return "Crew{" +
-                "isComplete=" + isComplete +
+                "flightNumber=" + flightNumber +
+                ", isComplete=" + isComplete +
                 ", fdp=" + fdp +
                 ", restBeforeFlight=" + restBeforeFlight +
                 ", sectorsToday=" + sectorsToday +

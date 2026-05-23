@@ -1,0 +1,149 @@
+package rules;
+
+// Hijerarhija prioriteta preko salience:
+// CANCEL = 100
+// DELAY / REDIRECT = 50
+// DEPART_ON_TIME = 10
+
+// --- CANCEL (SALIENCE 100) ---
+
+rule "Odluka - CANCEL usled ekstremnih uslova i piste"
+salience 100
+when
+    ExtremeWeatherConditions($fn : flightNumber)
+    RunwayProblem(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Ekstremni meteo uslovi kombinovani sa neoperativnošću ili kontaminacijom piste."));
+end
+
+rule "Odluka - CANCEL usled ugrožene bezbednosti"
+salience 100
+when
+    SafetyCompromised($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Bezbednost leta je direktno ugrožena zamorom posade u lošim uslovima."));
+end
+
+rule "Odluka - CANCEL usled tehničkih problema (Bez zamene aviona)"
+salience 100
+when
+    AircraftNotReady($fn : flightNumber)
+    Flight(flightNumber == $fn, hasReplacementAircraft == false)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Tehnički kvar na avionu, a zamensko vazduhoplovstvo nije na raspolaganju."));
+end
+
+rule "Odluka - CANCEL usled nesposobnosti posade (Bez zamene)"
+salience 100
+when
+    CrewNotCapable($fn : flightNumber)
+    Flight(flightNumber == $fn, hasReplacementCrew == false)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Crew ne ispunjava zakonske norme za FDP/odmor, bez opcije zamene."));
+end
+
+rule "Odluka - CANCEL usled kriticnog vremena"
+salience 100
+when
+    CriticalWeatherConditions($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Poletanje zabranjeno usled kršenja meteo-minimuma."));
+end
+
+rule "Odluka - CANCEL usled nespremnosti motora"
+salience 100
+when
+    EnginesNotReady($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Motori nisu spremni za pokretanje pri kritičnoj temperaturi."));
+end
+
+rule "Odluka - CANCEL usled zabrane poletanja"
+salience 100
+when
+    TakeoffForbidden($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.CANCEL, "Kritično: Poletanje zabranjeno usled prekoračenja meteo-minimuma."));
+end
+
+// --- DELAY / REDIRECT (SALIENCE 50) ---
+
+rule "Odluka - DELAY usled loših vremenskih uslova"
+salience 50
+when
+    PoorWeatherConditions($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DELAY, "Operativno odlaganje: Vremenski uslovi ispod standardnih operativnih granica."));
+end
+
+rule "Odluka - DELAY usled tehničkih problema (Postoji zamena)"
+salience 50
+when
+    AircraftNotReady($fn : flightNumber)
+    Flight(flightNumber == $fn, hasReplacementAircraft == true)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DELAY, "Operativno odlaganje: Pokrenuta procedura zamene aviona na gate-u."));
+end
+
+rule "Odluka - DELAY usled kontaminacije površina"
+salience 50
+when
+    SurfacesContaminated($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DELAY, "Operativno odlaganje: Obavezan ulazak u proceduru de-icing tretmana vazduhoplova."));
+end
+
+rule "Odluka - DELAY usled zamene posade"
+salience 50
+when
+    CrewNotCapable($fn : flightNumber)
+    Flight(flightNumber == $fn, hasReplacementCrew == true)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DELAY, "Operativno odlaganje: Čeka se dolazak i prijava zamenske posade iz rezerve."));
+end
+
+rule "Odluka - DELAY usled visokog operativnog rizika"
+salience 50
+when
+    HighOperationalRisk($fn : flightNumber)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DELAY, "Operativno odlaganje: Povećan rizik usled starosti vazduhoplova i nepovoljnog vremena."));
+end
+
+rule "Odluka - REDIRECT usled preopterećenja aerodroma"
+salience 50
+when
+    AirportUnderPressure($fn : flightNumber)
+    PoorWeatherConditions(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.REDIRECT, "Preusmeravanje: Aerodromska infrastruktura je pod preopterećenjem u lošim meteo uslovima."));
+end
+
+// --- DEPART_ON_TIME (SALIENCE 10) ---
+
+rule "Odluka - DEPART_ON_TIME"
+salience 10
+when
+    $f : Flight($fn : flightNumber, status != FlightStatus.REDIRECTED)
+    not (WeatherFact(flightNumber == $fn))
+    not (RunwayFact(flightNumber == $fn))
+    not (AircraftFact(flightNumber == $fn))
+    not (CrewFact(flightNumber == $fn))
+    not (OperationalFact(flightNumber == $fn))
+    not Recommendation(flightNumber == $fn)
+then
+    insert(new Recommendation(RecommendationAction.DEPART_ON_TIME, "Svi operativni sistemi, tehnički parametri i meteo uslovi su regularni."));
+end

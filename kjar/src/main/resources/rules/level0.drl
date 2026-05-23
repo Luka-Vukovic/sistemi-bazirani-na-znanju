@@ -1,0 +1,99 @@
+package rules;
+
+// Glavne model klase
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.Aircraft;
+import com.ftn.sbnz.model.Airport;
+import com.ftn.sbnz.model.Runway;
+import com.ftn.sbnz.model.Crew;
+import com.ftn.sbnz.model.WeatherReport;
+import com.ftn.sbnz.model.TechnicalAlarm;
+import com.ftn.sbnz.model.Recommendation;
+
+// Enumovi
+import com.ftn.sbnz.model.enums.FlightCategory;
+import com.ftn.sbnz.model.enums.FlightStatus;
+import com.ftn.sbnz.model.enums.RecommendationAction;
+import com.ftn.sbnz.model.enums.PrecipitationType;
+import com.ftn.sbnz.model.enums.PrecipitationIntensity;
+import com.ftn.sbnz.model.enums.AlarmSeverity;
+import com.ftn.sbnz.model.enums.AlarmStatus;
+import com.ftn.sbnz.model.enums.AlarmType;
+import com.ftn.sbnz.model.enums.MelCategory;
+import com.ftn.sbnz.model.enums.RunwayStatus;
+
+// Sve marker klase (fakte) sa slike image_be42a2.png
+import com.ftn.sbnz.model.facts.Fact;
+import com.ftn.sbnz.model.facts.WeatherFact;
+import com.ftn.sbnz.model.facts.RunwayFact;
+import com.ftn.sbnz.model.facts.AircraftFact;
+import com.ftn.sbnz.model.facts.CrewFact;
+import com.ftn.sbnz.model.facts.OperationalFact;
+
+// Konkretne meteo fakte
+import com.ftn.sbnz.model.facts.TailwindDetected;
+import com.ftn.sbnz.model.facts.CrosswindDetected;
+import com.ftn.sbnz.model.facts.CriticalCrosswindDetected;
+import com.ftn.sbnz.model.facts.LowVisibility;
+import com.ftn.sbnz.model.facts.CriticalVisibility;
+import com.ftn.sbnz.model.facts.ZeroVisibility;
+import com.ftn.sbnz.model.facts.IcingRisk;
+import com.ftn.sbnz.model.facts.FrostRisk;
+import com.ftn.sbnz.model.facts.ActiveIcing;
+import com.ftn.sbnz.model.facts.ExtremeCold;
+import com.ftn.sbnz.model.facts.CriticalCold;
+import com.ftn.sbnz.model.facts.FreezingRain;
+import com.ftn.sbnz.model.facts.Hail;
+import com.ftn.sbnz.model.facts.IcePellets;
+import com.ftn.sbnz.model.facts.HeavySnow;
+import com.ftn.sbnz.model.facts.HeavyRain;
+import com.ftn.sbnz.model.facts.HeavyPrecipitation;
+
+// Konkretne tehničke fakte
+import com.ftn.sbnz.model.facts.SeriousAlarm;
+import com.ftn.sbnz.model.facts.CriticalAlarmDetected;
+import com.ftn.sbnz.model.facts.MelCategoryA;
+import com.ftn.sbnz.model.facts.UnexpectedFailure;
+import com.ftn.sbnz.model.facts.ACheckExceeded;
+import com.ftn.sbnz.model.facts.NearACheck;
+import com.ftn.sbnz.model.facts.CalendarServiceExceeded;
+import com.ftn.sbnz.model.facts.OldAircraft;
+import com.ftn.sbnz.model.facts.AircraftNearService;
+
+// Konkretne fakte o posadi
+import com.ftn.sbnz.model.facts.CrewIncomplete;
+import com.ftn.sbnz.model.facts.InsufficientRest;
+import com.ftn.sbnz.model.facts.CrewTired;
+import com.ftn.sbnz.model.facts.CrewExceededLimit;
+import com.ftn.sbnz.model.facts.CrewOverloaded;
+
+// Konkretne infrastrukturne fakte
+import com.ftn.sbnz.model.facts.RunwayUnavailable;
+import com.ftn.sbnz.model.facts.RunwayCritical;
+import com.ftn.sbnz.model.facts.RunwayRisky;
+import com.ftn.sbnz.model.facts.RunwayDifficult;
+import com.ftn.sbnz.model.facts.NoGates;
+import com.ftn.sbnz.model.facts.FewGates;
+import com.ftn.sbnz.model.facts.SingleRunway;
+import com.ftn.sbnz.model.facts.CriticalRunwayCount;
+
+// Konkretne agregisane/operativne fakte
+import com.ftn.sbnz.model.facts.PoorWeatherConditions;
+import com.ftn.sbnz.model.facts.ExtremeWeatherConditions;
+import com.ftn.sbnz.model.facts.SurfacesContaminated;
+import com.ftn.sbnz.model.facts.NoHoldoverTime;
+import com.ftn.sbnz.model.facts.EnginesNotReady;
+import com.ftn.sbnz.model.facts.CriticalWeatherConditions;
+import com.ftn.sbnz.model.facts.TakeoffForbidden;
+import com.ftn.sbnz.model.facts.RunwayProblem;
+import com.ftn.sbnz.model.facts.TechnicalProblem;
+import com.ftn.sbnz.model.facts.AircraftNotReady;
+import com.ftn.sbnz.model.facts.AircraftTechnicallyRisky;
+import com.ftn.sbnz.model.facts.AirportUnderPressure;
+import com.ftn.sbnz.model.facts.HighOperationalRisk;
+import com.ftn.sbnz.model.facts.SafetyCompromised;
+import com.ftn.sbnz.model.facts.CrewNotCapable;
+
+// Java utilitiji za vreme
+import java.time.LocalDateTime;
+import java.time.LocalDate;
