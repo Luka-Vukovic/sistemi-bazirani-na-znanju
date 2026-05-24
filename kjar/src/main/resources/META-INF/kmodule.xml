@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<kmodule xmlns="http://www.jboss.org/寄り/drools/kmodule"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<kmodule xmlns="http://www.drools.org/xsd/kmodule"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.drools.org/xsd/kmodule http://www.drools.org/xsd/kmodule/kmodule.xsd">
 
-    <kbase name="rulesKBase" packages="rules">
-        <ksession name="ksession-rules" type="stateful" default="true" clockType="realtime"/>
+    <kbase name="rules" packages="rules">
+        <ksession name="ksession-rules"/>
     </kbase>
 
 </kmodule>

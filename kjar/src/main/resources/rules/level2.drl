@@ -1,245 +1,49 @@
 package rules;
 
-rule "Agregacija - Poor Weather Conditions"
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.facts.*;
+
+// Sva pravila za agregaciju činjenica imaju salience 500
+
+rule "Aggregation - Runway Problem due to difficult runway and snow or ice"
+salience 500
 when
     $f : Flight($fn : flightNumber)
-    (CriticalCrosswindDetected(flightNumber == $fn) || TailwindDetected(flightNumber == $fn))
-    CriticalVisibility(flightNumber == $fn)
-    not PoorWeatherConditions(flightNumber == $fn)
+    RunwayDifficult(flightNumber == $fn)
+    SurfacesContaminated(flightNumber == $fn)
 then
-    PoorWeatherConditions fact = new PoorWeatherConditions();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    // Kada imamo kombinaciju mraza i lošije piste, to je operativni problem (za DELAY)
 end
 
-rule "Agregacija - Extreme Weather Conditions"
-when
-    PoorWeatherConditions($fn : flightNumber)
-    IcingRisk(flightNumber == $fn)
-    not ExtremeWeatherConditions(flightNumber == $fn)
-then
-    ExtremeWeatherConditions fact = new ExtremeWeatherConditions();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Surfaces Contaminated"
-when
-    FrostRisk($fn : flightNumber)
-    $r : Runway(deicingComplete == false)
-    not SurfacesContaminated(flightNumber == $fn)
-then
-    SurfacesContaminated fact = new SurfacesContaminated();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - No Holdover Time usled ekstremne hladnoce i leda"
-when
-    ExtremeCold($fn : flightNumber)
-    IcingRisk(flightNumber == $fn)
-    not NoHoldoverTime(flightNumber == $fn)
-then
-    NoHoldoverTime fact = new NoHoldoverTime();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - No Holdover Time usled padavina"
+rule "Aggregation - Runway Problem due to difficult runway and strong tailwind"
+salience 500
 when
     $f : Flight($fn : flightNumber)
-    FreezingRain(flightNumber == $fn) || Hail(flightNumber == $fn) || IcePellets(flightNumber == $fn) || HeavySnow(flightNumber == $fn)
-    not NoHoldoverTime(flightNumber == $fn)
+    RunwayDifficult(flightNumber == $fn)
+    TailwindDetected(flightNumber == $fn)
 then
-    NoHoldoverTime fact = new NoHoldoverTime();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    // Povišen oprez / kašnjenje ako nije kritično
 end
 
-rule "Agregacija - Engines Not Ready"
+rule "Aggregation - Takeoff Forbidden due to combined CRITICAL hazards"
+salience 500
 when
-    CriticalCold($fn : flightNumber)
-    not EnginesNotReady(flightNumber == $fn)
-then
-    EnginesNotReady fact = new EnginesNotReady();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Critical Weather Conditions"
-when
-    CrosswindDetected($fn : flightNumber)
-    (HeavyPrecipitation(flightNumber == $fn) || ActiveIcing(flightNumber == $fn))
-    not CriticalWeatherConditions(flightNumber == $fn)
-then
-    CriticalWeatherConditions fact = new CriticalWeatherConditions();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Takeoff Forbidden usled Niske Vidljivosti"
-when
-    LowVisibility($fn : flightNumber)
-    $ap : Airport(lvtoCapability == false || lvtoPermit == false)
-    not TakeoffForbidden(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    RunwayCritical(flightNumber == $fn) 
+    SurfacesContaminated(flightNumber == $fn)
 then
     TakeoffForbidden fact = new TakeoffForbidden();
     fact.setFlightNumber($fn);
     insert(fact);
 end
 
-rule "Agregacija - Takeoff Forbidden usled Kriticne Vidljivosti"
+rule "Aggregation - Takeoff Forbidden due to critical runway state"
+salience 500
 when
-    CriticalVisibility($fn : flightNumber)
-    $ap : Airport(specialPermit == false)
-    not TakeoffForbidden(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    RunwayCritical(flightNumber == $fn) // Samo ako je pista kritična (rwycc <= 1)
 then
     TakeoffForbidden fact = new TakeoffForbidden();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Takeoff Forbidden usled Zero Visibility"
-when
-    ZeroVisibility($fn : flightNumber)
-    not TakeoffForbidden(flightNumber == $fn)
-then
-    TakeoffForbidden fact = new TakeoffForbidden();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Takeoff Forbidden usled No Holdover"
-when
-    NoHoldoverTime($fn : flightNumber)
-    not TakeoffForbidden(flightNumber == $fn)
-then
-    TakeoffForbidden fact = new TakeoffForbidden();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Runway Problem usled nedostupnosti ili kriticnog stanja"
-when
-    $f : Flight($fn : flightNumber)
-    RunwayUnavailable(flightNumber == $fn) || RunwayCritical(flightNumber == $fn)
-    not RunwayProblem(flightNumber == $fn)
-then
-    RunwayProblem fact = new RunwayProblem();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Runway Problem usled rizicne piste i bočnog vetra"
-when
-    RunwayRisky($fn : flightNumber)
-    CrosswindDetected(flightNumber == $fn)
-    not RunwayProblem(flightNumber == $fn)
-then
-    RunwayProblem fact = new RunwayProblem();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Runway Problem usled otezane piste i snega ili leda"
-when
-    RunwayDifficult($fn : flightNumber)
-    (HeavySnow(flightNumber == $fn) || ActiveIcing(flightNumber == $fn))
-    not RunwayProblem(flightNumber == $fn)
-then
-    RunwayProblem fact = new RunwayProblem();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Technical Problem"
-when
-    SeriousAlarm($fn : flightNumber)
-    CriticalAlarmDetected(flightNumber == $fn)
-    not TechnicalProblem(flightNumber == $fn)
-then
-    TechnicalProblem fact = new TechnicalProblem();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Aircraft Not Ready usled tehnickog problema"
-when
-    $f : Flight($fn : flightNumber, $dep : plannedDeparture)
-    TechnicalProblem(flightNumber == $fn)
-    eval(java.time.temporal.ChronoUnit.HOURS.between(java.time.LocalDateTime.now(), $dep) < 72)
-    not AircraftNotReady(flightNumber == $fn)
-then
-    AircraftNotReady fact = new AircraftNotReady();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Aircraft Not Ready usled MEL ili nepredvidjenog kvara"
-when
-    $f : Flight($fn : flightNumber)
-    MelCategoryA(flightNumber == $fn) || UnexpectedFailure(flightNumber == $fn)
-    not AircraftNotReady(flightNumber == $fn)
-then
-    AircraftNotReady fact = new AircraftNotReady();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Aircraft Technically Risky"
-when
-    $f : Flight($fn : flightNumber)
-    ACheckExceeded(flightNumber == $fn) || CalendarServiceExceeded(flightNumber == $fn) ||
-    (OldAircraft(flightNumber == $fn) && AircraftNearService(flightNumber == $fn)) ||
-    (NearACheck(flightNumber == $fn) && OldAircraft(flightNumber == $fn))
-    not AircraftTechnicallyRisky(flightNumber == $fn)
-then
-    AircraftTechnicallyRisky fact = new AircraftTechnicallyRisky();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Airport Under Pressure"
-when
-    $f : Flight($fn : flightNumber)
-    FewGates(flightNumber == $fn)
-    CriticalRunwayCount(flightNumber == $fn)
-    not AirportUnderPressure(flightNumber == $fn)
-then
-    AirportUnderPressure fact = new AirportUnderPressure();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - High Operational Risk"
-when
-    AircraftTechnicallyRisky($fn : flightNumber)
-    PoorWeatherConditions(flightNumber == $fn)
-    not HighOperationalRisk(flightNumber == $fn)
-then
-    HighOperationalRisk fact = new HighOperationalRisk();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Safety Compromised"
-when
-    CrewTired($fn : flightNumber)
-    (PoorWeatherConditions(flightNumber == $fn) || RunwayProblem(flightNumber == $fn))
-    not SafetyCompromised(flightNumber == $fn)
-then
-    SafetyCompromised fact = new SafetyCompromised();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Agregacija - Crew Not Capable"
-when
-    $f : Flight($fn : flightNumber)
-    CrewIncomplete(flightNumber == $fn) || CrewExceededLimit(flightNumber == $fn) || InsufficientRest(flightNumber == $fn)
-    not CrewNotCapable(flightNumber == $fn)
-then
-    CrewNotCapable fact = new CrewNotCapable();
     fact.setFlightNumber($fn);
     insert(fact);
 end

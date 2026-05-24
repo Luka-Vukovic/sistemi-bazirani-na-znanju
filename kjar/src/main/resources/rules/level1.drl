@@ -1,438 +1,77 @@
 package rules;
 
-// --- VREMENSKI USLOVI ---
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.WeatherReport;
+import com.ftn.sbnz.model.Runway;
+import com.ftn.sbnz.model.facts.*;
 
-rule "Meteo - Tailwind"
+rule "Meteo - Tailwind Component"
+salience 500
 when
-    $w : WeatherReport(tailwind > 19)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not TailwindDetected(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    WeatherReport(tailwind > 19)
 then
     TailwindDetected fact = new TailwindDetected();
     fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Critical Crosswind"
-when
-    $w : WeatherReport(crosswind > 65)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not CriticalCrosswindDetected(flightNumber == $fn)
-then
-    CriticalCrosswindDetected fact = new CriticalCrosswindDetected();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Crosswind"
-when
-    $w : WeatherReport(crosswind > 28 && crosswind <= 65)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not CrosswindDetected(flightNumber == $fn)
-then
-    CrosswindDetected fact = new CrosswindDetected();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Low Visibility"
-when
-    $w : WeatherReport(visibility < 550 && visibility >= 400)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not LowVisibility(flightNumber == $fn)
-then
-    LowVisibility fact = new LowVisibility();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Critical Visibility"
-when
-    $w : WeatherReport(visibility < 400 && visibility >= 75)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not CriticalVisibility(flightNumber == $fn)
-then
-    CriticalVisibility fact = new CriticalVisibility();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    insert(fact); 
 end
 
 rule "Meteo - Zero Visibility"
+salience 500
 when
-    $w : WeatherReport(visibility < 75)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not ZeroVisibility(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    WeatherReport(visibility < 75) /
 then
     ZeroVisibility fact = new ZeroVisibility();
     fact.setFlightNumber($fn);
     insert(fact);
-end
-
-rule "Meteo - Icing Risk"
-when
-    $w : WeatherReport(temperature < 0, precipitationType in (PrecipitationType.RAIN, PrecipitationType.SNOW, PrecipitationType.FOG))
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not IcingRisk(flightNumber == $fn)
-then
-    IcingRisk fact = new IcingRisk();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    
+    TakeoffForbidden tf = new TakeoffForbidden();
+    tf.setFlightNumber($fn);
+    insert(tf);
 end
 
 rule "Meteo - Frost Risk"
+salience 500
 when
-    $w : WeatherReport(temperature < 0, dewPoint <= temperature)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not FrostRisk(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    WeatherReport(temperature <= 0, dewPoint >= temperature) 
 then
     FrostRisk fact = new FrostRisk();
     fact.setFlightNumber($fn);
     insert(fact);
+    
+    SurfacesContaminated sc = new SurfacesContaminated();
+    sc.setFlightNumber($fn);
+    insert(sc);
 end
 
-rule "Meteo - Active Icing"
+rule "Infrastructure - Runway Critical State"
+salience 500
 when
-    $w : WeatherReport(icingPresent == true)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not ActiveIcing(flightNumber == $fn)
-then
-    ActiveIcing fact = new ActiveIcing();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Extreme Cold"
-when
-    $w : WeatherReport(temperature < -25 && temperature >= -40)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not ExtremeCold(flightNumber == $fn)
-then
-    ExtremeCold fact = new ExtremeCold();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Critical Cold"
-when
-    $w : WeatherReport(temperature < -40)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not CriticalCold(flightNumber == $fn)
-then
-    CriticalCold fact = new CriticalCold();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Freezing Rain"
-when
-    $w : WeatherReport(precipitationType == PrecipitationType.FREEZING_RAIN)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not FreezingRain(flightNumber == $fn)
-then
-    FreezingRain fact = new FreezingRain();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Hail"
-when
-    $w : WeatherReport(precipitationType == PrecipitationType.HAIL)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not Hail(flightNumber == $fn)
-then
-    Hail fact = new Hail();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Ice Pellets"
-when
-    $w : WeatherReport(precipitationType == PrecipitationType.ICE_PELLETS)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not IcePellets(flightNumber == $fn)
-then
-    IcePellets fact = new IcePellets();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Heavy Snow"
-when
-    $w : WeatherReport(precipitationType == PrecipitationType.SNOW, precipitationIntensity == PrecipitationIntensity.HEAVY)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not HeavySnow(flightNumber == $fn)
-then
-    HeavySnow fact = new HeavySnow();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Heavy Rain"
-when
-    $w : WeatherReport(precipitationType == PrecipitationType.RAIN, precipitationIntensity == PrecipitationIntensity.HEAVY)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not HeavyRain(flightNumber == $fn)
-then
-    HeavyRain fact = new HeavyRain();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Meteo - Heavy Precipitation"
-when
-    $w : WeatherReport(precipitationIntensity == PrecipitationIntensity.HEAVY)
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    not HeavyPrecipitation(flightNumber == $fn)
-then
-    HeavyPrecipitation fact = new HeavyPrecipitation();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-// --- TEHNIČKI ALARMI I STATUS AVIONA ---
-
-rule "Tehnika - Serious Alarm"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $a : TechnicalAlarm(flightNumber == $fn, status == AlarmStatus.ACTIVE, severity == AlarmSeverity.HIGH)
-    not SeriousAlarm(flightNumber == $fn)
-then
-    SeriousAlarm fact = new SeriousAlarm();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Critical Alarm"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $a : TechnicalAlarm(flightNumber == $fn, status == AlarmStatus.ACTIVE, severity == AlarmSeverity.CRITICAL)
-    not CriticalAlarmDetected(flightNumber == $fn)
-then
-    CriticalAlarmDetected fact = new CriticalAlarmDetected();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Mel Category A"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $a : TechnicalAlarm(flightNumber == $fn, status == AlarmStatus.ACTIVE, melCategory == MelCategory.A)
-    not MelCategoryA(flightNumber == $fn)
-then
-    MelCategoryA fact = new MelCategoryA();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Unexpected Failure"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $a : TechnicalAlarm(flightNumber == $fn, status == AlarmStatus.ACTIVE, melCategory == MelCategory.NOT_ON_MEL, severity != AlarmSeverity.LOW)
-    not UnexpectedFailure(flightNumber == $fn)
-then
-    UnexpectedFailure fact = new UnexpectedFailure();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - A-Check Exceeded"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber, $ac : aircraft)
-    Aircraft(this == $ac, flightHoursSinceService > 600 || cyclesSinceService > 300)
-    not ACheckExceeded(flightNumber == $fn)
-then
-    ACheckExceeded fact = new ACheckExceeded();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Near A-Check"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber, $ac : aircraft)
-    Aircraft(this == $ac, flightHoursSinceService > 500 || cyclesSinceService > 250)
-    not NearACheck(flightNumber == $fn)
-then
-    NearACheck fact = new NearACheck();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Calendar Service Exceeded"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber, $ac : aircraft)
-    Aircraft(this == $ac, nextServiceDate != null, nextServiceDate.isBefore(LocalDate.now()))
-    not CalendarServiceExceeded(flightNumber == $fn)
-then
-    CalendarServiceExceeded fact = new CalendarServiceExceeded();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Old Aircraft"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber, $ac : aircraft)
-    Aircraft(this == $ac, age > 25)
-    not OldAircraft(flightNumber == $fn)
-then
-    OldAircraft fact = new OldAircraft();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Tehnika - Aircraft Near Service"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber, $ac : aircraft)
-    Aircraft(this == $ac, age > 20, nextServiceDate != null, nextServiceDate.isBefore(LocalDate.now().plusDays(30)))
-    not AircraftNearService(flightNumber == $fn)
-then
-    AircraftNearService fact = new AircraftNearService();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-// --- POSADA ---
-
-rule "Posada - Crew Incomplete"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $c : Crew(flightNumber == $fn, isComplete == false)
-    not CrewIncomplete(flightNumber == $fn)
-then
-    CrewIncomplete fact = new CrewIncomplete();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Posada - Insufficient Rest"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $c : Crew(flightNumber == $fn, restBeforeFlight < 12)
-    not InsufficientRest(flightNumber == $fn)
-then
-    InsufficientRest fact = new InsufficientRest();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Posada - Crew Tired"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $c : Crew(flightNumber == $fn, (isNightDuty == false && fdp > 10) || (isNightDuty == true && fdp > 9))
-    not CrewTired(flightNumber == $fn)
-then
-    CrewTired fact = new CrewTired();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Posada - Crew Exceeded Limit"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $c : Crew(flightNumber == $fn, (isNightDuty == false && fdp > 13) || (isNightDuty == true && fdp > 11))
-    not CrewExceededLimit(flightNumber == $fn)
-then
-    CrewExceededLimit fact = new CrewExceededLimit();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Posada - Crew Overloaded"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $c : Crew(flightNumber == $fn, sectorsToday >= 6)
-    not CrewOverloaded(flightNumber == $fn)
-then
-    CrewOverloaded fact = new CrewOverloaded();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-// --- INFRASTRUKTURA AERODROMA ---
-
-rule "Infrastruktura - Runway Unavailable"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $r : Runway(status == RunwayStatus.CLOSED || status == RunwayStatus.MAINTENANCE)
-    not RunwayUnavailable(flightNumber == $fn)
-then
-    RunwayUnavailable fact = new RunwayUnavailable();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Infrastruktura - Runway Critical"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $r : Runway(rwycc <= 1)
-    not RunwayCritical(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    Runway(rwycc <= 1)
 then
     RunwayCritical fact = new RunwayCritical();
     fact.setFlightNumber($fn);
     insert(fact);
+    
+    RunwayProblem rp = new RunwayProblem();
+    rp.setFlightNumber($fn);
+    insert(rp);
 end
 
-rule "Infrastruktura - Runway Risky"
+rule "Infrastructure - Runway Risky"
+salience 500
 when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $r : Runway(rwycc >= 2 && rwycc <= 3)
-    not RunwayRisky(flightNumber == $fn)
+    $f : Flight($fn : flightNumber)
+    Runway(deicingComplete == false || (rwycc > 1 && rwycc <= 3)) 
 then
     RunwayRisky fact = new RunwayRisky();
     fact.setFlightNumber($fn);
     insert(fact);
-end
-
-rule "Infrastruktura - Runway Difficult"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $r : Runway(rwycc == 4)
-    not RunwayDifficult(flightNumber == $fn)
-then
-    RunwayDifficult fact = new RunwayDifficult();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Infrastruktura - No Gates"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $ap : Airport(freeGates == 0)
-    not NoGates(flightNumber == $fn)
-then
-    NoGates fact = new NoGates();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Infrastruktura - Few Gates"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $ap : Airport(freeGates > 0 && freeGates <= 2)
-    not FewGates(flightNumber == $fn)
-then
-    FewGates fact = new FewGates();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Infrastruktura - Single Runway"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $ap : Airport(availableRunways == 1)
-    not SingleRunway(flightNumber == $fn)
-then
-    SingleRunway fact = new SingleRunway();
-    fact.setFlightNumber($fn);
-    insert(fact);
-end
-
-rule "Infrastruktura - Critical Runway Count"
-when
-    $f : Flight(status != FlightStatus.REDIRECTED, $fn : flightNumber)
-    $ap : Airport(availableRunways * 2 < totalRunways)
-    not CriticalRunwayCount(flightNumber == $fn)
-then
-    CriticalRunwayCount fact = new CriticalRunwayCount();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    
+    RunwayDifficult rd = new RunwayDifficult();
+    rd.setFlightNumber($fn);
+    insert(rd);
 end

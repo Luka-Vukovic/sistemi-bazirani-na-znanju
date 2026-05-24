@@ -58,7 +58,7 @@ public class ScenarioFactory {
     }
 
     public static Crew getTiredCrewJU301() {
-        return new Crew(true, 12, 10, 3, false);
+        return new Crew(1, true, 12, 10, 3, false);
     }
 
     public static Airport getBelgradeAirport() {
@@ -110,6 +110,6 @@ public class ScenarioFactory {
     }
 
     public static Crew getRestedCrew() {
-        return new Crew(true, 4, 14, 1, false);
+        return new Crew(1, true, 4, 14, 1, false);
     }
 }

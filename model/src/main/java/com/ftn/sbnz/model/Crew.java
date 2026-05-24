@@ -29,7 +29,7 @@ public class Crew implements Serializable {
     public int getFlightNumber() { return flightNumber; }
     public void setFlightNumber(int flightNumber) { this.flightNumber = flightNumber; }
 
-    public boolean isComplete() { return isComplete; }
+    public boolean getIsComplete() { return isComplete; }
     public void setComplete(boolean complete) { isComplete = complete; }
 
     public int getFdp() { return fdp; }
@@ -41,7 +41,7 @@ public class Crew implements Serializable {
     public int getSectorsToday() { return sectorsToday; }
     public void setSectorsToday(int sectorsToday) { this.sectorsToday = sectorsToday; }
 
-    public boolean isNightDuty() { return isNightDuty; }
+    public boolean getIsNightDuty() { return isNightDuty; }
     public void setNightDuty(boolean nightDuty) { isNightDuty = nightDuty; }
 
     @Override
