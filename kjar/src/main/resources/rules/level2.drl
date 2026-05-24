@@ -3,7 +3,6 @@ package rules;
 import com.ftn.sbnz.model.Flight;
 import com.ftn.sbnz.model.facts.*;
 
-// Sva pravila za agregaciju činjenica imaju salience 500
 
 rule "Aggregation - Runway Problem due to difficult runway and snow or ice"
 salience 500
@@ -12,7 +11,10 @@ when
     RunwayDifficult(flightNumber == $fn)
     SurfacesContaminated(flightNumber == $fn)
 then
-    // Kada imamo kombinaciju mraza i lošije piste, to je operativni problem (za DELAY)
+    System.out.println(String.format(
+        ">>> [LEVEL 2 - AGGREGATION] Flight #%s: Critical combination detected! Difficult runway conditions combined with surface contamination (frost/ice/snow). Forwarding to Level 3 for DELAY assessment.", 
+        $fn
+    ));
 end
 
 rule "Aggregation - Runway Problem due to difficult runway and strong tailwind"
@@ -22,7 +24,10 @@ when
     RunwayDifficult(flightNumber == $fn)
     TailwindDetected(flightNumber == $fn)
 then
-    // Povišen oprez / kašnjenje ako nije kritično
+    System.out.println(String.format(
+        ">>> [LEVEL 2 - AGGREGATION] Flight #%s: Operational risk warning! Combination of difficult runway conditions and strong tailwind component detected. Increased caution required.", 
+        $fn
+    ));
 end
 
 rule "Aggregation - Takeoff Forbidden due to combined CRITICAL hazards"
@@ -32,18 +37,18 @@ when
     RunwayCritical(flightNumber == $fn) 
     SurfacesContaminated(flightNumber == $fn)
 then
-    TakeoffForbidden fact = new TakeoffForbidden();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    TakeoffForbidden factDr = new TakeoffForbidden();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
 end
 
 rule "Aggregation - Takeoff Forbidden due to critical runway state"
 salience 500
 when
     $f : Flight($fn : flightNumber)
-    RunwayCritical(flightNumber == $fn) // Samo ako je pista kritična (rwycc <= 1)
+    RunwayCritical(flightNumber == $fn)
 then
-    TakeoffForbidden fact = new TakeoffForbidden();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    TakeoffForbidden factDr = new TakeoffForbidden();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
 end

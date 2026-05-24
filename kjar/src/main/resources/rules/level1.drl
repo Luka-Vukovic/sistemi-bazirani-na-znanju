@@ -11,20 +11,20 @@ when
     $f : Flight($fn : flightNumber)
     WeatherReport(tailwind > 19)
 then
-    TailwindDetected fact = new TailwindDetected();
-    fact.setFlightNumber($fn);
-    insert(fact); 
+    TailwindDetected factDr = new TailwindDetected();
+    factDr.setFlightNumber($fn);
+    insert(factDr); 
 end
 
 rule "Meteo - Zero Visibility"
 salience 500
 when
     $f : Flight($fn : flightNumber)
-    WeatherReport(visibility < 75) /
+    WeatherReport(visibility < 75)
 then
-    ZeroVisibility fact = new ZeroVisibility();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    ZeroVisibility factDr = new ZeroVisibility();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
     
     TakeoffForbidden tf = new TakeoffForbidden();
     tf.setFlightNumber($fn);
@@ -37,9 +37,9 @@ when
     $f : Flight($fn : flightNumber)
     WeatherReport(temperature <= 0, dewPoint >= temperature) 
 then
-    FrostRisk fact = new FrostRisk();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    FrostRisk factDr = new FrostRisk();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
     
     SurfacesContaminated sc = new SurfacesContaminated();
     sc.setFlightNumber($fn);
@@ -52,9 +52,9 @@ when
     $f : Flight($fn : flightNumber)
     Runway(rwycc <= 1)
 then
-    RunwayCritical fact = new RunwayCritical();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    RunwayCritical factDr = new RunwayCritical();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
     
     RunwayProblem rp = new RunwayProblem();
     rp.setFlightNumber($fn);
@@ -67,9 +67,9 @@ when
     $f : Flight($fn : flightNumber)
     Runway(deicingComplete == false || (rwycc > 1 && rwycc <= 3)) 
 then
-    RunwayRisky fact = new RunwayRisky();
-    fact.setFlightNumber($fn);
-    insert(fact);
+    RunwayRisky factDr = new RunwayRisky();
+    factDr.setFlightNumber($fn);
+    insert(factDr);
     
     RunwayDifficult rd = new RunwayDifficult();
     rd.setFlightNumber($fn);

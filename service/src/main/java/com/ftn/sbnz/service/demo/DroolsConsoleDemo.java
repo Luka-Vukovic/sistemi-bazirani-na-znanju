@@ -1,165 +1,89 @@
 package com.ftn.sbnz.service.demo;
 
-import java.time.LocalDateTime;
-import java.util.Collection;
-
-import org.kie.api.KieServices;
-import org.kie.api.runtime.KieContainer;
-import org.kie.api.runtime.KieSession;
-
 import com.ftn.sbnz.model.*;
 import com.ftn.sbnz.model.enums.*;
-import com.ftn.sbnz.model.facts.*;
-import com.ftn.sbnz.service.util.ConsoleAgendaEventListener;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
 
-public class DroolsConsoleDemo {
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
-    public static void runDemo() {
+@Component
+public class DroolsConsoleDemo implements CommandLineRunner {
 
-        KieServices ks = KieServices.Factory.get();
-        KieContainer kContainer = ks.getKieClasspathContainer();
+    public static final Map<Integer, Flight> flightsRepository = new HashMap<>();
+    public static final Map<Integer, WeatherReport> weatherRepository = new HashMap<>();
+    public static final Map<Integer, Runway> runwayRepository = new HashMap<>();
 
+    @Override
+    public void run(String... args) throws Exception {
         System.out.println("==================================================");
-        System.out.println("          FLIGHT DECISION SUPPORT SYSTEM          ");
+        System.out.println("   INITIALIZING EXISTENT FLIGHTS IN REPOSITORY    ");
         System.out.println("==================================================\n");
 
-        simulateFlightCancellation(kContainer);
-        simulateFlightDelay(kContainer);
-        simulateRegularFlight(kContainer);
-    }
+        Flight f101 = new Flight();
+        f101.setFlightNumber(101);
+        f101.setStatus(FlightStatus.SCHEDULED);
+        f101.setPlannedDeparture(LocalDateTime.now().plusHours(2));
+        f101.setHasReplacementAircraft(false);
 
-    /**
-     * SCENARIO 1: CANCEL
-     * Tailwind > 19
-     * Visibility < 75
-     * Runway critical (rwycc <= 1)
-     */
-    private static void simulateFlightCancellation(KieContainer kContainer) {
-        System.out.println("--- [SCENARIO 1: CRITICAL CONDITIONS - CANCELLATION] ---");
-        
-        KieSession kSession = kContainer.newKieSession("ksession-rules");
-        kSession.addEventListener(new ConsoleAgendaEventListener());
+        WeatherReport w101 = new WeatherReport();
+        w101.setTailwind(25);
+        w101.setVisibility(50);
 
-        int flightNum = 101;
+        Runway r101 = new Runway();
+        r101.setStatus(RunwayStatus.OPEN);
+        r101.setRwycc(1);
+        r101.setRunwaysBeingDeiced(false);
+        r101.setDeicingComplete(false);
 
-        Flight flight = new Flight();
-        flight.setFlightNumber(flightNum);
-        flight.setStatus(FlightStatus.SCHEDULED);
-        flight.setPlannedDeparture(LocalDateTime.now().plusHours(2));
-        flight.setHasReplacementAircraft(false);
+        flightsRepository.put(101, f101);
+        weatherRepository.put(101, w101);
+        runwayRepository.put(101, r101);
 
-        WeatherReport weather = new WeatherReport();
-        weather.setTailwind(25);       // > 19 -> "Meteo - Tailwind Component"
-        weather.setVisibility(50);     // < 75 -> "Meteo - Zero Visibility" -> TakeoffForbidden
+        Flight f202 = new Flight();
+        f202.setFlightNumber(202);
+        f202.setStatus(FlightStatus.SCHEDULED);
+        f202.setPlannedDeparture(LocalDateTime.now().plusHours(4));
+        f202.setHasReplacementAircraft(false);
 
-        Runway runway = new Runway();
-        runway.setRwycc(1);            // <= 1 -> "Infrastructure - Runway Critical State" -> RunwayProblem
-        runway.setStatus(RunwayStatus.OPEN);
+        WeatherReport w202 = new WeatherReport();
+        w202.setTemperature(-5);
+        w202.setDewPoint(-5);
 
-        kSession.insert(flight);
-        kSession.insert(weather);
-        kSession.insert(runway);
+        Runway r202 = new Runway();
+        r202.setStatus(RunwayStatus.OPEN);
+        r202.setRwycc(4);
+        r202.setRunwaysBeingDeiced(false);
+        r202.setDeicingComplete(false);
 
-        kSession.fireAllRules();
+        flightsRepository.put(202, f202);
+        weatherRepository.put(202, w202);
+        runwayRepository.put(202, r202);
 
-        printRecommendation(kSession, flightNum);
-        kSession.dispose(); 
-        
-        System.out.println("\n--------------------------------------------------\n");
-    }
+        Flight f303 = new Flight();
+        f303.setFlightNumber(303);
+        f303.setStatus(FlightStatus.SCHEDULED);
+        f303.setPlannedDeparture(LocalDateTime.now().plusHours(5));
+        f303.setHasReplacementAircraft(false);
 
-    /**
-     * SCENARIO 2: DELAY
-     * Frost
-     * temp <= 0
-     * dewPoint >= temp
-     * deicingComplete == false
-     */
-    private static void simulateFlightDelay(KieContainer kContainer) {
-        System.out.println("--- [SCENARIO 2: OPERATIONAL HAZARD - DELAY] ---");
-        
-        KieSession kSession = kContainer.newKieSession("ksession-rules");
-        kSession.addEventListener(new ConsoleAgendaEventListener());
+        WeatherReport w303 = new WeatherReport();
+        w303.setTailwind(5);
+        w303.setVisibility(10000);
+        w303.setTemperature(15);
+        w303.setDewPoint(5);
 
-        int flightNum = 202;
+        Runway r303 = new Runway();
+        r303.setStatus(RunwayStatus.OPEN);
+        r303.setRwycc(6);
+        r303.setRunwaysBeingDeiced(false);
+        r303.setDeicingComplete(true);
 
-        Flight flight = new Flight();
-        flight.setFlightNumber(flightNum);
-        flight.setStatus(FlightStatus.SCHEDULED);
-        flight.setPlannedDeparture(LocalDateTime.now().plusHours(4));
-        
-        WeatherReport weather = new WeatherReport();
-        weather.setTemperature(-5);
-        weather.setDewPoint(-5);       // dewPoint >= temperature -> "Meteo - Frost Risk" -> SurfacesContaminated
-        weather.setTailwind(5);
-        weather.setVisibility(5000); 
+        flightsRepository.put(303, f303);
+        weatherRepository.put(303, w303);
+        runwayRepository.put(303, r303);
 
-        Runway runway = new Runway();
-        runway.setRwycc(4);
-        runway.setDeicingComplete(false); // deicingComplete = flase -> "Infrastructure - Runway Risky" -> RunwayDifficult
-
-        kSession.insert(flight);
-        kSession.insert(weather);
-        kSession.insert(runway);
-
-        kSession.fireAllRules();
-
-        printRecommendation(kSession, flightNum);
-        kSession.dispose();
-        
-        System.out.println("\n--------------------------------------------------\n");
-    }
-
-    /**
-     * SCENARIO 3: DEPART_ON_TIME.
-     */
-    private static void simulateRegularFlight(KieContainer kContainer) {
-        System.out.println("--- [SCENARIO 3: IDEAL CONDITIONS - DEPART ON TIME] ---");
-        
-        KieSession kSession = kContainer.newKieSession("ksession-rules");
-        kSession.addEventListener(new ConsoleAgendaEventListener());
-
-        int flightNum = 303;
-
-        Flight flight = new Flight();
-        flight.setFlightNumber(flightNum);
-        flight.setStatus(FlightStatus.SCHEDULED);
-        flight.setPlannedDeparture(LocalDateTime.now().plusHours(5));
-        
-        WeatherReport weather = new WeatherReport();
-        weather.setTailwind(5);
-        weather.setCrosswind(10);
-        weather.setVisibility(10000);
-        weather.setTemperature(15);
-        weather.setDewPoint(5);
-
-        Runway runway = new Runway();
-        runway.setRwycc(6);
-        runway.setStatus(RunwayStatus.OPEN);
-        runway.setDeicingComplete(true);
-
-        kSession.insert(flight);
-        kSession.insert(weather);
-        kSession.insert(runway);
-
-        kSession.fireAllRules();
-
-        printRecommendation(kSession, flightNum);
-        kSession.dispose();
-        
-        System.out.println("\n==================================================");
-    }
-
-    private static void printRecommendation(KieSession kSession, int flightNum) {
-        Collection<?> recommendations = kSession.getObjects(o -> o instanceof Recommendation);
-        
-        if (!recommendations.isEmpty()) {
-            Recommendation rec = (Recommendation) recommendations.iterator().next();
-            System.out.println("\n[FINAL SYSTEM RECOMMENDATION FOR FLIGHT " + flightNum + "]:");
-            System.out.println("  ACTION: " + rec.getAction());
-            System.out.println("  REASON: " + rec.getReason());
-        } else {
-            System.out.println("\n[SYSTEM ERROR]: Engine failed to evaluate a recommendation.");
-        }
+        System.out.println("==================================================\n");
     }
 }
