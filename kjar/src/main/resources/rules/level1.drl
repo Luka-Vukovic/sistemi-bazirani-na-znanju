@@ -3,17 +3,68 @@ package rules;
 import com.ftn.sbnz.model.Flight;
 import com.ftn.sbnz.model.WeatherReport;
 import com.ftn.sbnz.model.Runway;
+import com.ftn.sbnz.model.Aircraft;
+import com.ftn.sbnz.model.Crew;
+import com.ftn.sbnz.model.Airport;
+import com.ftn.sbnz.model.TechnicalAlarm;
+import com.ftn.sbnz.model.enums.*;
 import com.ftn.sbnz.model.facts.*;
 
-rule "Meteo - Tailwind Component"
+// ==================== METEO ====================
+
+rule "Meteo - Tailwind Detected"
 salience 500
 when
     $f : Flight($fn : flightNumber)
     WeatherReport(tailwind > 19)
 then
-    TailwindDetected factDr = new TailwindDetected();
-    factDr.setFlightNumber($fn);
-    insert(factDr); 
+    TailwindDetected fact = new TailwindDetected();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Crosswind Detected"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(crosswind > 28)
+then
+    CrosswindDetected fact = new CrosswindDetected();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Critical Crosswind"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(crosswind > 65)
+then
+    CriticalCrosswindDetected fact = new CriticalCrosswindDetected();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Low Visibility"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(visibility < 550, visibility >= 400)
+then
+    LowVisibility fact = new LowVisibility();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Critical Visibility"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(visibility < 400, visibility >= 75)
+then
+    CriticalVisibility fact = new CriticalVisibility();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end
 
 rule "Meteo - Zero Visibility"
@@ -22,40 +73,177 @@ when
     $f : Flight($fn : flightNumber)
     WeatherReport(visibility < 75)
 then
-    ZeroVisibility factDr = new ZeroVisibility();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
-    
+    ZeroVisibility fact = new ZeroVisibility();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
     TakeoffForbidden tf = new TakeoffForbidden();
     tf.setFlightNumber($fn);
     insert(tf);
+end
+
+rule "Meteo - Icing Risk"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(temperature < 0,
+                  precipitationType == PrecipitationType.RAIN ||
+                  precipitationType == PrecipitationType.SNOW ||
+                  precipitationType == PrecipitationType.FOG)
+then
+    IcingRisk fact = new IcingRisk();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end
 
 rule "Meteo - Frost Risk"
 salience 500
 when
     $f : Flight($fn : flightNumber)
-    WeatherReport(temperature <= 0, dewPoint >= temperature) 
+    WeatherReport(temperature <= 0, dewPoint >= temperature)
 then
-    FrostRisk factDr = new FrostRisk();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
-    
+    FrostRisk fact = new FrostRisk();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
     SurfacesContaminated sc = new SurfacesContaminated();
     sc.setFlightNumber($fn);
     insert(sc);
 end
 
-rule "Infrastructure - Runway Critical State"
+rule "Meteo - Active Icing"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(icingPresent == true)
+then
+    ActiveIcing fact = new ActiveIcing();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Extreme Cold"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(temperature < -25)
+then
+    ExtremeCold fact = new ExtremeCold();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Meteo - Critical Cold"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(temperature < -40)
+then
+    CriticalCold fact = new CriticalCold();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
+    EnginesNotReady enr = new EnginesNotReady();
+    enr.setFlightNumber($fn);
+    insert(enr);
+end
+
+rule "Meteo - Freezing Rain"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(precipitationType == PrecipitationType.FREEZING_RAIN)
+then
+    FreezingRain fact = new FreezingRain();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
+    NoHoldoverTime nht = new NoHoldoverTime();
+    nht.setFlightNumber($fn);
+    insert(nht);
+end
+
+rule "Meteo - Hail"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(precipitationType == PrecipitationType.HAIL)
+then
+    Hail fact = new Hail();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
+    NoHoldoverTime nht = new NoHoldoverTime();
+    nht.setFlightNumber($fn);
+    insert(nht);
+end
+
+rule "Meteo - Ice Pellets"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(precipitationType == PrecipitationType.ICE_PELLETS)
+then
+    IcePellets fact = new IcePellets();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
+    NoHoldoverTime nht = new NoHoldoverTime();
+    nht.setFlightNumber($fn);
+    insert(nht);
+end
+
+rule "Meteo - Heavy Snow"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(precipitationType == PrecipitationType.SNOW,
+                  precipitationIntensity == PrecipitationIntensity.HEAVY)
+then
+    HeavySnow fact = new HeavySnow();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
+    NoHoldoverTime nht = new NoHoldoverTime();
+    nht.setFlightNumber($fn);
+    insert(nht);
+end
+
+rule "Meteo - Heavy Rain"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    WeatherReport(precipitationType == PrecipitationType.RAIN,
+                  precipitationIntensity == PrecipitationIntensity.HEAVY)
+then
+    HeavyRain fact = new HeavyRain();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== PISTA ====================
+
+rule "Infrastructure - Runway Unavailable"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Runway(status == RunwayStatus.CLOSED || status == RunwayStatus.MAINTENANCE)
+then
+    RunwayUnavailable fact = new RunwayUnavailable();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - Runway Critical"
 salience 500
 when
     $f : Flight($fn : flightNumber)
     Runway(rwycc <= 1)
 then
-    RunwayCritical factDr = new RunwayCritical();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
-    
+    RunwayCritical fact = new RunwayCritical();
+    fact.setFlightNumber($fn);
+    insert(fact);
+
     RunwayProblem rp = new RunwayProblem();
     rp.setFlightNumber($fn);
     insert(rp);
@@ -65,13 +253,257 @@ rule "Infrastructure - Runway Risky"
 salience 500
 when
     $f : Flight($fn : flightNumber)
-    Runway(deicingComplete == false || (rwycc > 1 && rwycc <= 3)) 
+    Runway(rwycc >= 2, rwycc <= 3)
 then
-    RunwayRisky factDr = new RunwayRisky();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
-    
-    RunwayDifficult rd = new RunwayDifficult();
-    rd.setFlightNumber($fn);
-    insert(rd);
+    RunwayRisky fact = new RunwayRisky();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - Runway Difficult"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Runway(rwycc == 4)
+then
+    RunwayDifficult fact = new RunwayDifficult();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - No Gates"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Airport(freeGates == 0)
+then
+    NoGates fact = new NoGates();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - Few Gates"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Airport(freeGates > 0, freeGates <= 2)
+then
+    FewGates fact = new FewGates();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - Single Runway"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Airport(availableRunways == 1)
+then
+    SingleRunway fact = new SingleRunway();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Infrastructure - Critical Runway Count"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Airport($total : totalRunways, $avail : availableRunways,
+            $avail * 2 < $total)
+then
+    CriticalRunwayCount fact = new CriticalRunwayCount();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== AVION ====================
+
+rule "Aircraft - A-Check Exceeded"
+salience 500
+when
+    $f : Flight($fn : flightNumber, $ac : aircraft)
+    Aircraft(this == $ac,
+             flightHoursSinceService > 600 || cyclesSinceService > 300)
+then
+    ACheckExceeded fact = new ACheckExceeded();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aircraft - Near A-Check"
+salience 500
+when
+    $f : Flight($fn : flightNumber, $ac : aircraft)
+    Aircraft(this == $ac,
+             flightHoursSinceService > 500 || cyclesSinceService > 250)
+    not ACheckExceeded(flightNumber == $fn)
+then
+    NearACheck fact = new NearACheck();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aircraft - Calendar Service Exceeded"
+salience 500
+when
+    $f : Flight($fn : flightNumber, $ac : aircraft)
+    Aircraft(this == $ac, nextServiceDate < java.time.LocalDate.now())
+then
+    CalendarServiceExceeded fact = new CalendarServiceExceeded();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aircraft - Old Aircraft"
+salience 500
+when
+    $f : Flight($fn : flightNumber, $ac : aircraft)
+    Aircraft(this == $ac, age > 25)
+then
+    OldAircraft fact = new OldAircraft();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aircraft - Near Service"
+salience 500
+when
+    $f : Flight($fn : flightNumber, $ac : aircraft)
+    Aircraft(this == $ac, age > 20,
+             nextServiceDate < java.time.LocalDate.now().plusDays(30))
+then
+    AircraftNearService fact = new AircraftNearService();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== ALARMI ====================
+
+rule "Alarm - Serious Alarm"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalAlarm(flightNumber == $fn, severity == AlarmSeverity.HIGH,
+                   status == AlarmStatus.ACTIVE)
+then
+    SeriousAlarm fact = new SeriousAlarm();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Alarm - Critical Alarm"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalAlarm(flightNumber == $fn, severity == AlarmSeverity.CRITICAL,
+                   status == AlarmStatus.ACTIVE)
+then
+    CriticalAlarmDetected fact = new CriticalAlarmDetected();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Alarm - MEL Category A"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalAlarm(flightNumber == $fn, melCategory == MelCategory.A,
+                   status == AlarmStatus.ACTIVE)
+then
+    MelCategoryA fact = new MelCategoryA();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Alarm - Unexpected Failure"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalAlarm(flightNumber == $fn,
+                   melCategory == MelCategory.NOT_ON_MEL,
+                   severity != AlarmSeverity.LOW,
+                   status == AlarmStatus.ACTIVE)
+then
+    UnexpectedFailure fact = new UnexpectedFailure();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== POSADA ====================
+
+rule "Crew - Incomplete"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, isComplete == false)
+then
+    CrewIncomplete fact = new CrewIncomplete();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Tired (Day Duty)"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, isNightDuty == false, fdp > 10)
+then
+    CrewTired fact = new CrewTired();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Tired (Night Duty)"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, isNightDuty == true, fdp > 9)
+then
+    CrewTired fact = new CrewTired();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Exceeded Limit (Day Duty)"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, isNightDuty == false, fdp > 13)
+then
+    CrewExceededLimit fact = new CrewExceededLimit();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Exceeded Limit (Night Duty)"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, isNightDuty == true, fdp > 11)
+then
+    CrewExceededLimit fact = new CrewExceededLimit();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Insufficient Rest"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, restBeforeFlight < 12)
+then
+    InsufficientRest fact = new InsufficientRest();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Crew - Overloaded"
+salience 500
+when
+    $f : Flight($fn : flightNumber)
+    Crew(flightNumber == $fn, sectorsToday >= 6)
+then
+    CrewOverloaded fact = new CrewOverloaded();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end

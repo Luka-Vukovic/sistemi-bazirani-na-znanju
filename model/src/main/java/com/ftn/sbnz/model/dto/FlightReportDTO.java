@@ -6,6 +6,7 @@ import com.ftn.sbnz.model.Runway;
 import com.ftn.sbnz.model.Recommendation;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class FlightReportDTO implements Serializable {
 
@@ -15,14 +16,25 @@ public class FlightReportDTO implements Serializable {
     private WeatherReport weather;
     private Runway runway;
     private Recommendation recommendation;
+    private List<String> unmetConditions;
 
     public FlightReportDTO() {}
 
-    public FlightReportDTO(Flight flight, WeatherReport weather, Runway runway, Recommendation recommendation) {
+    public FlightReportDTO(Flight flight, WeatherReport weather, Runway runway,
+                           Recommendation recommendation) {
         this.flight = flight;
         this.weather = weather;
         this.runway = runway;
         this.recommendation = recommendation;
+    }
+
+    public FlightReportDTO(Flight flight, WeatherReport weather, Runway runway,
+                           Recommendation recommendation, List<String> unmetConditions) {
+        this.flight = flight;
+        this.weather = weather;
+        this.runway = runway;
+        this.recommendation = recommendation;
+        this.unmetConditions = unmetConditions;
     }
 
     public Flight getFlight() { return flight; }
@@ -36,4 +48,7 @@ public class FlightReportDTO implements Serializable {
 
     public Recommendation getRecommendation() { return recommendation; }
     public void setRecommendation(Recommendation recommendation) { this.recommendation = recommendation; }
+
+    public List<String> getUnmetConditions() { return unmetConditions; }
+    public void setUnmetConditions(List<String> unmetConditions) { this.unmetConditions = unmetConditions; }
 }

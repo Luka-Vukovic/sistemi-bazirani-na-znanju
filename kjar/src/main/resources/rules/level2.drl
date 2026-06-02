@@ -1,54 +1,271 @@
 package rules;
 
 import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.Airport;
 import com.ftn.sbnz.model.facts.*;
 
+// ==================== VREME ====================
 
-rule "Aggregation - Runway Problem due to difficult runway and snow or ice"
-salience 500
+rule "Aggregation - Poor Weather Conditions"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    (TailwindDetected(flightNumber == $fn) or CriticalCrosswindDetected(flightNumber == $fn))
+    CriticalVisibility(flightNumber == $fn)
+then
+    PoorWeatherConditions fact = new PoorWeatherConditions();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Extreme Weather Conditions"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    PoorWeatherConditions(flightNumber == $fn)
+    IcingRisk(flightNumber == $fn)
+then
+    ExtremeWeatherConditions fact = new ExtremeWeatherConditions();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Critical Weather - Crosswind with Precipitation"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    CrosswindDetected(flightNumber == $fn)
+    (HeavyRain(flightNumber == $fn) or ActiveIcing(flightNumber == $fn))
+then
+    CriticalWeatherConditions fact = new CriticalWeatherConditions();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Surfaces Contaminated due to Icing Risk"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    IcingRisk(flightNumber == $fn)
+    not SurfacesContaminated(flightNumber == $fn)
+then
+    SurfacesContaminated fact = new SurfacesContaminated();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - NoHoldoverTime due to Extreme Cold + Icing"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    ExtremeCold(flightNumber == $fn)
+    IcingRisk(flightNumber == $fn)
+    not NoHoldoverTime(flightNumber == $fn)
+then
+    NoHoldoverTime fact = new NoHoldoverTime();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Takeoff Forbidden due to NoHoldoverTime"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    NoHoldoverTime(flightNumber == $fn)
+    not TakeoffForbidden(flightNumber == $fn)
+then
+    TakeoffForbidden fact = new TakeoffForbidden();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Takeoff Forbidden - Low Visibility no LVTO"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    LowVisibility(flightNumber == $fn)
+    Airport(lvtoCapability == false || lvtoPermit == false)
+    not TakeoffForbidden(flightNumber == $fn)
+then
+    TakeoffForbidden fact = new TakeoffForbidden();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Takeoff Forbidden - Critical Visibility no Special Permit"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    CriticalVisibility(flightNumber == $fn)
+    Airport(specialPermit == false)
+    not TakeoffForbidden(flightNumber == $fn)
+then
+    TakeoffForbidden fact = new TakeoffForbidden();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== PISTA ====================
+
+rule "Aggregation - Runway Problem - Risky + Crosswind"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    RunwayRisky(flightNumber == $fn)
+    CrosswindDetected(flightNumber == $fn)
+    not RunwayProblem(flightNumber == $fn)
+then
+    RunwayProblem fact = new RunwayProblem();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Runway Problem - Difficult + Heavy Snow or Icing"
+salience 400
 when
     $f : Flight($fn : flightNumber)
     RunwayDifficult(flightNumber == $fn)
-    SurfacesContaminated(flightNumber == $fn)
+    (HeavySnow(flightNumber == $fn) or ActiveIcing(flightNumber == $fn))
+    not RunwayProblem(flightNumber == $fn)
 then
-    System.out.println(String.format(
-        ">>> [LEVEL 2 - AGGREGATION] Flight #%s: Critical combination detected! Difficult runway conditions combined with surface contamination (frost/ice/snow). Forwarding to Level 3 for DELAY assessment.", 
-        $fn
-    ));
+    RunwayProblem fact = new RunwayProblem();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end
 
-rule "Aggregation - Runway Problem due to difficult runway and strong tailwind"
-salience 500
+rule "Aggregation - Runway Problem - Unavailable"
+salience 400
 when
     $f : Flight($fn : flightNumber)
-    RunwayDifficult(flightNumber == $fn)
-    TailwindDetected(flightNumber == $fn)
+    RunwayUnavailable(flightNumber == $fn)
+    not RunwayProblem(flightNumber == $fn)
 then
-    System.out.println(String.format(
-        ">>> [LEVEL 2 - AGGREGATION] Flight #%s: Operational risk warning! Combination of difficult runway conditions and strong tailwind component detected. Increased caution required.", 
-        $fn
-    ));
+    RunwayProblem fact = new RunwayProblem();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end
 
-rule "Aggregation - Takeoff Forbidden due to combined CRITICAL hazards"
-salience 500
+rule "Aggregation - Airport Under Pressure"
+salience 400
 when
     $f : Flight($fn : flightNumber)
-    RunwayCritical(flightNumber == $fn) 
-    SurfacesContaminated(flightNumber == $fn)
+    (FewGates(flightNumber == $fn) or NoGates(flightNumber == $fn))
+    CriticalRunwayCount(flightNumber == $fn)
 then
-    TakeoffForbidden factDr = new TakeoffForbidden();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
+    AirportUnderPressure fact = new AirportUnderPressure();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end
 
-rule "Aggregation - Takeoff Forbidden due to critical runway state"
-salience 500
+// ==================== AVION ====================
+
+rule "Aggregation - Service Exceeded"
+salience 400
 when
     $f : Flight($fn : flightNumber)
-    RunwayCritical(flightNumber == $fn)
+    (ACheckExceeded(flightNumber == $fn) or CalendarServiceExceeded(flightNumber == $fn))
 then
-    TakeoffForbidden factDr = new TakeoffForbidden();
-    factDr.setFlightNumber($fn);
-    insert(factDr);
+    ServiceExceeded fact = new ServiceExceeded();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Aircraft Technically Risky - Service"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    ServiceExceeded(flightNumber == $fn)
+    not AircraftTechnicallyRisky(flightNumber == $fn)
+then
+    AircraftTechnicallyRisky fact = new AircraftTechnicallyRisky();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Aircraft Technically Risky - Old + Near Service"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    OldAircraft(flightNumber == $fn)
+    AircraftNearService(flightNumber == $fn)
+    not AircraftTechnicallyRisky(flightNumber == $fn)
+then
+    AircraftTechnicallyRisky fact = new AircraftTechnicallyRisky();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Technical Problem"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    SeriousAlarm(flightNumber == $fn)
+    CriticalAlarmDetected(flightNumber == $fn)
+then
+    TechnicalProblem fact = new TechnicalProblem();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Aircraft Not Ready - MEL A or Unexpected"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    (MelCategoryA(flightNumber == $fn) or UnexpectedFailure(flightNumber == $fn))
+    not AircraftNotReady(flightNumber == $fn)
+then
+    AircraftNotReady fact = new AircraftNotReady();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Aircraft Not Ready - Technical Problem"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalProblem(flightNumber == $fn)
+    not AircraftNotReady(flightNumber == $fn)
+then
+    AircraftNotReady fact = new AircraftNotReady();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - High Operational Risk"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    AircraftTechnicallyRisky(flightNumber == $fn)
+    PoorWeatherConditions(flightNumber == $fn)
+then
+    HighOperationalRisk fact = new HighOperationalRisk();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+// ==================== POSADA ====================
+
+rule "Aggregation - Crew Not Capable"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    (CrewIncomplete(flightNumber == $fn) or
+     CrewExceededLimit(flightNumber == $fn) or
+     InsufficientRest(flightNumber == $fn))
+then
+    CrewNotCapable fact = new CrewNotCapable();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Safety Compromised"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    CrewTired(flightNumber == $fn)
+    (PoorWeatherConditions(flightNumber == $fn) or RunwayProblem(flightNumber == $fn))
+then
+    SafetyCompromised fact = new SafetyCompromised();
+    fact.setFlightNumber($fn);
+    insert(fact);
 end

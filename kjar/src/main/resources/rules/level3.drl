@@ -1,13 +1,13 @@
 package rules;
 
 import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.Recommendation;
+import com.ftn.sbnz.model.enums.RecommendationAction;
 import com.ftn.sbnz.model.facts.*;
 
-// Hijerarhija odluka: CANCEL (100) -> DELAY (50) -> DEPART (10)
+// ==================== CANCEL (salience 100) ====================
 
-// --- ODLUKA: CANCEL (Salience 100) ---
-
-rule "Decision - CANCEL due to extreme weather and runway problems"
+rule "Decision - CANCEL - Takeoff Forbidden + Runway Problem"
 salience 100
 when
     $f : Flight($fn : flightNumber)
@@ -15,72 +15,223 @@ when
     RunwayProblem(flightNumber == $fn)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.CANCEL, "Critical: Extreme weather conditions combined with runway non-operational status or contamination.");
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Extreme weather conditions combined with runway problems.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
 
-rule "Decision - CANCEL due to critical weather minimums"
+rule "Decision - CANCEL - Takeoff Forbidden"
 salience 100
 when
     $f : Flight($fn : flightNumber)
     TakeoffForbidden(flightNumber == $fn)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.CANCEL, "Critical: Takeoff prohibited due to violation of meteorological minimums.");
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Takeoff prohibited - meteorological minimums violated.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
 
+rule "Decision - CANCEL - Critical Weather"
+salience 100
+when
+    $f : Flight($fn : flightNumber)
+    CriticalWeatherConditions(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Critical weather conditions - crosswind combined with active icing or heavy precipitation.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
 
-// --- ODLUKA: DELAY / REDIRECT (Salience 50) ---
+rule "Decision - CANCEL - Engines Not Ready"
+salience 100
+when
+    $f : Flight($fn : flightNumber)
+    EnginesNotReady(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Temperature below -40°C, engines cannot be started.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
 
-rule "Decision - DELAY due to contaminated surfaces"
+rule "Decision - CANCEL - Safety Compromised"
+salience 100
+when
+    $f : Flight($fn : flightNumber)
+    SafetyCompromised(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Flight safety compromised - fatigued crew combined with adverse conditions.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - CANCEL - Crew Not Capable, No Replacement"
+salience 100
+when
+    $f : Flight($fn : flightNumber, hasReplacementCrew == false)
+    CrewNotCapable(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Crew not capable and no replacement crew available.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - CANCEL - Aircraft Not Ready, No Replacement"
+salience 100
+when
+    $f : Flight($fn : flightNumber, hasReplacementAircraft == false)
+    AircraftNotReady(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Aircraft not airworthy and no replacement aircraft available.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - CANCEL - Extreme Weather + Runway Problem"
+salience 100
+when
+    $f : Flight($fn : flightNumber)
+    ExtremeWeatherConditions(flightNumber == $fn)
+    RunwayProblem(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
+        "CANCEL: Extreme weather conditions combined with runway problems.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+// ==================== DELAY / REDIRECT (salience 50) ====================
+
+rule "Decision - DELAY - Crew Not Capable, Has Replacement"
+salience 50
+when
+    $f : Flight($fn : flightNumber, hasReplacementCrew == true)
+    CrewNotCapable(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: Crew not capable. Replacement crew being assigned.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - DELAY - Aircraft Not Ready, Has Replacement"
+salience 50
+when
+    $f : Flight($fn : flightNumber, hasReplacementAircraft == true)
+    AircraftNotReady(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: Aircraft not airworthy. Replacement aircraft being assigned.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - DELAY - Surfaces Contaminated"
 salience 50
 when
     $f : Flight($fn : flightNumber)
     SurfacesContaminated(flightNumber == $fn)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.DELAY, "Operational Delay: Mandatory entry into aircraft de-icing treatment procedure.");
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: De-icing procedure required before takeoff.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
 
-rule "Decision - DELAY due to runway problems"
+rule "Decision - DELAY - Extreme Cold, No Active Icing"
+salience 50
+when
+    $f : Flight($fn : flightNumber)
+    ExtremeCold(flightNumber == $fn)
+    not ActiveIcing(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: Extreme cold - de-icing procedure required.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - DELAY - Poor Weather"
+salience 50
+when
+    $f : Flight($fn : flightNumber)
+    PoorWeatherConditions(flightNumber == $fn)
+    not RunwayProblem(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: Poor weather conditions - awaiting improvement.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - DELAY - High Operational Risk"
+salience 50
+when
+    $f : Flight($fn : flightNumber)
+    HighOperationalRisk(flightNumber == $fn)
+    not Recommendation(flightNumber == $fn)
+then
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: High operational risk - aircraft technical issues combined with adverse weather.");
+    rec.setFlightNumber($fn);
+    insert(rec);
+end
+
+rule "Decision - DELAY - Runway Problem"
 salience 50
 when
     $f : Flight($fn : flightNumber)
     RunwayProblem(flightNumber == $fn)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.DELAY, "Operational Delay: Runway requires cleaning or state assessment.");
+    Recommendation rec = new Recommendation(RecommendationAction.DELAY,
+        "DELAY: Runway requires maintenance or assessment.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
 
-rule "Decision - DELAY due to difficult runway conditions"
+rule "Decision - REDIRECT - Airport Under Pressure + Poor Weather"
 salience 50
 when
     $f : Flight($fn : flightNumber)
-    RunwayDifficult(flightNumber == $fn)
+    AirportUnderPressure(flightNumber == $fn)
+    PoorWeatherConditions(flightNumber == $fn)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.DELAY, "Operational Delay: Traffic caution. Runway conditions are risky.");
+    Recommendation rec = new Recommendation(RecommendationAction.REDIRECT,
+        "REDIRECT: Airport under pressure - limited gates and runways combined with poor weather.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
 
+// ==================== DEPART ON TIME (salience 10) ====================
 
-// --- ODLUKA: DEPART_ON_TIME (Salience 10) ---
-
-rule "Decision - DEPART_ON_TIME"
+rule "Decision - DEPART ON TIME"
 salience 10
 when
     $f : Flight($fn : flightNumber)
     not Recommendation(flightNumber == $fn)
 then
-    Recommendation rec = new Recommendation(RecommendationAction.DEPART_ON_TIME, "All operational systems, technical parameters, and weather conditions are within normal limits.");
+    Recommendation rec = new Recommendation(RecommendationAction.DEPART_ON_TIME,
+        "All systems nominal. No weather, technical, or operational issues detected.");
     rec.setFlightNumber($fn);
     insert(rec);
 end

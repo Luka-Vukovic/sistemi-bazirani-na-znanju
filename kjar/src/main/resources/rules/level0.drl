@@ -1,99 +1,281 @@
 package rules;
 
-// Glavne model klase
 import com.ftn.sbnz.model.Flight;
-import com.ftn.sbnz.model.Aircraft;
-import com.ftn.sbnz.model.Airport;
-import com.ftn.sbnz.model.Runway;
-import com.ftn.sbnz.model.Crew;
-import com.ftn.sbnz.model.WeatherReport;
-import com.ftn.sbnz.model.TechnicalAlarm;
-import com.ftn.sbnz.model.Recommendation;
+import com.ftn.sbnz.model.Condition;
+import com.ftn.sbnz.model.ConditionMet;
+import com.ftn.sbnz.model.facts.*;
 
-// Enumovi
-import com.ftn.sbnz.model.enums.FlightCategory;
-import com.ftn.sbnz.model.enums.FlightStatus;
-import com.ftn.sbnz.model.enums.RecommendationAction;
-import com.ftn.sbnz.model.enums.PrecipitationType;
-import com.ftn.sbnz.model.enums.PrecipitationIntensity;
-import com.ftn.sbnz.model.enums.AlarmSeverity;
-import com.ftn.sbnz.model.enums.AlarmStatus;
-import com.ftn.sbnz.model.enums.AlarmType;
-import com.ftn.sbnz.model.enums.MelCategory;
-import com.ftn.sbnz.model.enums.RunwayStatus;
+// ==================== CONDITION TREE ====================
 
-// Sve marker klase (fakte) sa slike image_be42a2.png
-import com.ftn.sbnz.model.facts.Fact;
-import com.ftn.sbnz.model.facts.WeatherFact;
-import com.ftn.sbnz.model.facts.RunwayFact;
-import com.ftn.sbnz.model.facts.AircraftFact;
-import com.ftn.sbnz.model.facts.CrewFact;
-import com.ftn.sbnz.model.facts.OperationalFact;
+rule "Backward - Insert Condition Tree"
+salience 1000
+when
+    $f : Flight($fn : flightNumber)
+then
+    // Root
+    insert(new Condition("takeoffAllowed", "weatherPermits"));
+    insert(new Condition("takeoffAllowed", "runwayReady"));
+    insert(new Condition("takeoffAllowed", "aircraftReady"));
+    insert(new Condition("takeoffAllowed", "crewCapable"));
 
-// Konkretne meteo fakte
-import com.ftn.sbnz.model.facts.TailwindDetected;
-import com.ftn.sbnz.model.facts.CrosswindDetected;
-import com.ftn.sbnz.model.facts.CriticalCrosswindDetected;
-import com.ftn.sbnz.model.facts.LowVisibility;
-import com.ftn.sbnz.model.facts.CriticalVisibility;
-import com.ftn.sbnz.model.facts.ZeroVisibility;
-import com.ftn.sbnz.model.facts.IcingRisk;
-import com.ftn.sbnz.model.facts.FrostRisk;
-import com.ftn.sbnz.model.facts.ActiveIcing;
-import com.ftn.sbnz.model.facts.ExtremeCold;
-import com.ftn.sbnz.model.facts.CriticalCold;
-import com.ftn.sbnz.model.facts.FreezingRain;
-import com.ftn.sbnz.model.facts.Hail;
-import com.ftn.sbnz.model.facts.IcePellets;
-import com.ftn.sbnz.model.facts.HeavySnow;
-import com.ftn.sbnz.model.facts.HeavyRain;
-import com.ftn.sbnz.model.facts.HeavyPrecipitation;
+    // Weather
+    insert(new Condition("weatherPermits", "windAcceptable"));
+    insert(new Condition("weatherPermits", "visibilityAcceptable"));
+    insert(new Condition("weatherPermits", "noActiveIcing"));
+    insert(new Condition("weatherPermits", "precipitationSafe"));
 
-// Konkretne tehničke fakte
-import com.ftn.sbnz.model.facts.SeriousAlarm;
-import com.ftn.sbnz.model.facts.CriticalAlarmDetected;
-import com.ftn.sbnz.model.facts.MelCategoryA;
-import com.ftn.sbnz.model.facts.UnexpectedFailure;
-import com.ftn.sbnz.model.facts.ACheckExceeded;
-import com.ftn.sbnz.model.facts.NearACheck;
-import com.ftn.sbnz.model.facts.CalendarServiceExceeded;
-import com.ftn.sbnz.model.facts.OldAircraft;
-import com.ftn.sbnz.model.facts.AircraftNearService;
+    // Runway
+    insert(new Condition("runwayReady", "runwayNotClosed"));
+    insert(new Condition("runwayReady", "runwayRwyccAcceptable"));
 
-// Konkretne fakte o posadi
-import com.ftn.sbnz.model.facts.CrewIncomplete;
-import com.ftn.sbnz.model.facts.InsufficientRest;
-import com.ftn.sbnz.model.facts.CrewTired;
-import com.ftn.sbnz.model.facts.CrewExceededLimit;
-import com.ftn.sbnz.model.facts.CrewOverloaded;
+    // Aircraft
+    insert(new Condition("aircraftReady", "noCriticalAlarms"));
+    insert(new Condition("aircraftReady", "melCategoryOk"));
+    insert(new Condition("aircraftReady", "serviceNotExceeded"));
 
-// Konkretne infrastrukturne fakte
-import com.ftn.sbnz.model.facts.RunwayUnavailable;
-import com.ftn.sbnz.model.facts.RunwayCritical;
-import com.ftn.sbnz.model.facts.RunwayRisky;
-import com.ftn.sbnz.model.facts.RunwayDifficult;
-import com.ftn.sbnz.model.facts.NoGates;
-import com.ftn.sbnz.model.facts.FewGates;
-import com.ftn.sbnz.model.facts.SingleRunway;
-import com.ftn.sbnz.model.facts.CriticalRunwayCount;
+    // Crew
+    insert(new Condition("crewCapable", "crewComplete"));
+    insert(new Condition("crewCapable", "fdpNotExceeded"));
+    insert(new Condition("crewCapable", "restSufficient"));
+end
 
-// Konkretne agregisane/operativne fakte
-import com.ftn.sbnz.model.facts.PoorWeatherConditions;
-import com.ftn.sbnz.model.facts.ExtremeWeatherConditions;
-import com.ftn.sbnz.model.facts.SurfacesContaminated;
-import com.ftn.sbnz.model.facts.NoHoldoverTime;
-import com.ftn.sbnz.model.facts.EnginesNotReady;
-import com.ftn.sbnz.model.facts.CriticalWeatherConditions;
-import com.ftn.sbnz.model.facts.TakeoffForbidden;
-import com.ftn.sbnz.model.facts.RunwayProblem;
-import com.ftn.sbnz.model.facts.TechnicalProblem;
-import com.ftn.sbnz.model.facts.AircraftNotReady;
-import com.ftn.sbnz.model.facts.AircraftTechnicallyRisky;
-import com.ftn.sbnz.model.facts.AirportUnderPressure;
-import com.ftn.sbnz.model.facts.HighOperationalRisk;
-import com.ftn.sbnz.model.facts.SafetyCompromised;
-import com.ftn.sbnz.model.facts.CrewNotCapable;
+// ==================== CONDITION MET — WEATHER ====================
 
-// Java utilitiji za vreme
-import java.time.LocalDateTime;
-import java.time.LocalDate;
+rule "ConditionMet - windAcceptable - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not TailwindDetected(flightNumber == $fn)
+    not CriticalCrosswindDetected(flightNumber == $fn)
+then
+    insert(new ConditionMet("windAcceptable", true));
+end
+
+rule "ConditionMet - windAcceptable - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (TailwindDetected(flightNumber == $fn) or CriticalCrosswindDetected(flightNumber == $fn))
+then
+    insert(new ConditionMet("windAcceptable", false));
+end
+
+rule "ConditionMet - visibilityAcceptable - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not LowVisibility(flightNumber == $fn)
+    not CriticalVisibility(flightNumber == $fn)
+    not ZeroVisibility(flightNumber == $fn)
+then
+    insert(new ConditionMet("visibilityAcceptable", true));
+end
+
+rule "ConditionMet - visibilityAcceptable - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (LowVisibility(flightNumber == $fn) or
+     CriticalVisibility(flightNumber == $fn) or
+     ZeroVisibility(flightNumber == $fn))
+then
+    insert(new ConditionMet("visibilityAcceptable", false));
+end
+
+rule "ConditionMet - noActiveIcing - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not ActiveIcing(flightNumber == $fn)
+    not FrostRisk(flightNumber == $fn)
+then
+    insert(new ConditionMet("noActiveIcing", true));
+end
+
+rule "ConditionMet - noActiveIcing - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (ActiveIcing(flightNumber == $fn) or FrostRisk(flightNumber == $fn))
+then
+    insert(new ConditionMet("noActiveIcing", false));
+end
+
+rule "ConditionMet - precipitationSafe - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not FreezingRain(flightNumber == $fn)
+    not Hail(flightNumber == $fn)
+    not IcePellets(flightNumber == $fn)
+    not HeavySnow(flightNumber == $fn)
+then
+    insert(new ConditionMet("precipitationSafe", true));
+end
+
+rule "ConditionMet - precipitationSafe - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (FreezingRain(flightNumber == $fn) or
+     Hail(flightNumber == $fn) or
+     IcePellets(flightNumber == $fn) or
+     HeavySnow(flightNumber == $fn))
+then
+    insert(new ConditionMet("precipitationSafe", false));
+end
+
+// ==================== CONDITION MET — RUNWAY ====================
+
+rule "ConditionMet - runwayNotClosed - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not RunwayUnavailable(flightNumber == $fn)
+then
+    insert(new ConditionMet("runwayNotClosed", true));
+end
+
+rule "ConditionMet - runwayNotClosed - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    RunwayUnavailable(flightNumber == $fn)
+then
+    insert(new ConditionMet("runwayNotClosed", false));
+end
+
+rule "ConditionMet - runwayRwyccAcceptable - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not RunwayCritical(flightNumber == $fn)
+    not RunwayRisky(flightNumber == $fn)
+then
+    insert(new ConditionMet("runwayRwyccAcceptable", true));
+end
+
+rule "ConditionMet - runwayRwyccAcceptable - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (RunwayCritical(flightNumber == $fn) or RunwayRisky(flightNumber == $fn))
+then
+    insert(new ConditionMet("runwayRwyccAcceptable", false));
+end
+
+// ==================== CONDITION MET — AIRCRAFT ====================
+
+rule "ConditionMet - noCriticalAlarms - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not TechnicalProblem(flightNumber == $fn)
+    not CriticalAlarmDetected(flightNumber == $fn)
+then
+    insert(new ConditionMet("noCriticalAlarms", true));
+end
+
+rule "ConditionMet - noCriticalAlarms - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (TechnicalProblem(flightNumber == $fn) or CriticalAlarmDetected(flightNumber == $fn))
+then
+    insert(new ConditionMet("noCriticalAlarms", false));
+end
+
+rule "ConditionMet - melCategoryOk - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not MelCategoryA(flightNumber == $fn)
+    not UnexpectedFailure(flightNumber == $fn)
+then
+    insert(new ConditionMet("melCategoryOk", true));
+end
+
+rule "ConditionMet - melCategoryOk - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (MelCategoryA(flightNumber == $fn) or UnexpectedFailure(flightNumber == $fn))
+then
+    insert(new ConditionMet("melCategoryOk", false));
+end
+
+rule "ConditionMet - serviceNotExceeded - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not ACheckExceeded(flightNumber == $fn)
+    not CalendarServiceExceeded(flightNumber == $fn)
+then
+    insert(new ConditionMet("serviceNotExceeded", true));
+end
+
+rule "ConditionMet - serviceNotExceeded - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (ACheckExceeded(flightNumber == $fn) or CalendarServiceExceeded(flightNumber == $fn))
+then
+    insert(new ConditionMet("serviceNotExceeded", false));
+end
+
+// ==================== CONDITION MET — CREW ====================
+
+rule "ConditionMet - crewComplete - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not CrewIncomplete(flightNumber == $fn)
+then
+    insert(new ConditionMet("crewComplete", true));
+end
+
+rule "ConditionMet - crewComplete - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    CrewIncomplete(flightNumber == $fn)
+then
+    insert(new ConditionMet("crewComplete", false));
+end
+
+rule "ConditionMet - fdpNotExceeded - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not CrewExceededLimit(flightNumber == $fn)
+    not CrewOverloaded(flightNumber == $fn)
+then
+    insert(new ConditionMet("fdpNotExceeded", true));
+end
+
+rule "ConditionMet - fdpNotExceeded - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    (CrewExceededLimit(flightNumber == $fn) or CrewOverloaded(flightNumber == $fn))
+then
+    insert(new ConditionMet("fdpNotExceeded", false));
+end
+
+rule "ConditionMet - restSufficient - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not InsufficientRest(flightNumber == $fn)
+then
+    insert(new ConditionMet("restSufficient", true));
+end
+
+rule "ConditionMet - restSufficient - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    InsufficientRest(flightNumber == $fn)
+then
+    insert(new ConditionMet("restSufficient", false));
+end

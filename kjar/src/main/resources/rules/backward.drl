@@ -1,0 +1,20 @@
+package rules;
+
+import com.ftn.sbnz.model.Condition;
+import com.ftn.sbnz.model.ConditionMet;
+
+query "unmetConditions" (String $parent, String $child)
+
+    // Bazni slucaj: direktan uslov koji je pao
+    Condition(parent == $parent, $child := child)
+    and
+    ConditionMet(name == $child, satisfied == false)
+
+    or
+
+    // Rekurzivni slucaj: prolazak kroz medju-cvorove stabla
+    Condition(parent == $parent, $middle : child)
+    and
+    unmetConditions($middle, $child;)
+
+end
