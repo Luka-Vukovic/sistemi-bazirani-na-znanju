@@ -3,18 +3,18 @@ package rules;
 import com.ftn.sbnz.model.Condition;
 import com.ftn.sbnz.model.ConditionMet;
 
-query "unmetConditions" (String $parent, String $child)
+query "unmetConditions" (String $parent, String $child, String $reason)
 
-    // Bazni slucaj: direktan uslov koji je pao
+    // Bazni slucaj: direktan uslov koji je pao - izvlacimo naziv i razlog
     Condition(parent == $parent, $child := child)
     and
-    ConditionMet(name == $child, satisfied == false)
+    ConditionMet(name == $child, satisfied == false, $reason := reason)
 
     or
 
-    // Rekurzivni slucaj: prolazak kroz medju-cvorove stabla
+    // Rekurzivni slucaj: prolaz kroz medju-cvorove i propagiranje razloga ka vrhu
     Condition(parent == $parent, $middle : child)
     and
-    unmetConditions($middle, $child;)
+    unmetConditions($middle, $child, $reason;)
 
 end

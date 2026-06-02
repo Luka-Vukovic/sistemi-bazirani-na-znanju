@@ -2,12 +2,13 @@ package com.ftn.sbnz.service.service;
 
 import com.ftn.sbnz.model.*;
 import com.ftn.sbnz.model.dto.FlightReportDTO;
+import com.ftn.sbnz.model.dto.UnmetConditionDTO; // <-- Uvezen novi DTO
 import com.ftn.sbnz.service.util.ConsoleAgendaEventListener;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.QueryResults;
 import org.kie.api.runtime.rule.QueryResultsRow;
-import org.kie.api.runtime.rule.Variable; // <-- DODATO: Neophodno za prosleđivanje varijable u query
+import org.kie.api.runtime.rule.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,20 +74,24 @@ public class FlightDecisionService {
         KieSession kSession = buildAndFire(flight, weather, runway, airport, crew, alarms);
         Recommendation recommendation = extractRecommendation(kSession, flight.getFlightNumber());
 
-        List<String> unmetConditions = new ArrayList<>();
+        // Kreiranje liste objekata umesto liste običnih Stringova
+        List<UnmetConditionDTO> unmetConditions = new ArrayList<>();
         
-        // IZMENA: Prosleđena su 2 argumenta. "takeoffAllowed" kao ulazni ($parent) 
-        // i Variable.v kao izlazni ($child) koji Drools treba da poveže i vrati.
-        QueryResults results = kSession.getQueryResults("unmetConditions", "takeoffAllowed", Variable.v);
+        // Prosleđujemo dva Variable.v (jedan za naziv deteta, jedan za razlog)
+        QueryResults results = kSession.getQueryResults("unmetConditions", "takeoffAllowed", Variable.v, Variable.v);
 
         for (QueryResultsRow row : results) {
-            String unmet = (String) row.get("$child");
-            if (!unmetConditions.contains(unmet)) {
-                unmetConditions.add(unmet);
+            String unmetName = (String) row.get("$child");
+            String reason = (String) row.get("$reason");
+
+            // Izbegavanje duplikata kroz Stream API provere naziva uslova
+            boolean alreadyExists = unmetConditions.stream().anyMatch(c -> c.getCondition().equals(unmetName));
+            if (!alreadyExists) {
+                unmetConditions.add(new UnmetConditionDTO(unmetName, reason != null ? reason : "Description missing."));
             }
         }
 
-        logger.info("Unmet conditions for flight {}: {}", flight.getFlightNumber(), unmetConditions);
+        logger.info("Unmet conditions count for flight {}: {}", flight.getFlightNumber(), unmetConditions.size());
         kSession.dispose();
 
         return new FlightReportDTO(flight, weather, runway, recommendation, unmetConditions);

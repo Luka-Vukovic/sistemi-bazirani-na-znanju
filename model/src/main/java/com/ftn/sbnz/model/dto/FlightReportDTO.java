@@ -16,7 +16,7 @@ public class FlightReportDTO implements Serializable {
     private WeatherReport weather;
     private Runway runway;
     private Recommendation recommendation;
-    private List<String> unmetConditions;
+    private List<UnmetConditionDTO> unmetConditions; // <-- Izmenjen tip liste
 
     public FlightReportDTO() {}
 
@@ -29,7 +29,7 @@ public class FlightReportDTO implements Serializable {
     }
 
     public FlightReportDTO(Flight flight, WeatherReport weather, Runway runway,
-                           Recommendation recommendation, List<String> unmetConditions) {
+                           Recommendation recommendation, List<UnmetConditionDTO> unmetConditions) {
         this.flight = flight;
         this.weather = weather;
         this.runway = runway;
@@ -49,6 +49,6 @@ public class FlightReportDTO implements Serializable {
     public Recommendation getRecommendation() { return recommendation; }
     public void setRecommendation(Recommendation recommendation) { this.recommendation = recommendation; }
 
-    public List<String> getUnmetConditions() { return unmetConditions; }
-    public void setUnmetConditions(List<String> unmetConditions) { this.unmetConditions = unmetConditions; }
+    public List<UnmetConditionDTO> getUnmetConditions() { return unmetConditions; }
+    public void setUnmetConditions(List<UnmetConditionDTO> unmetConditions) { this.unmetConditions = unmetConditions; }
 }
