@@ -3,8 +3,8 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://www.drools.org/xsd/kmodule http://www.drools.org/xsd/kmodule/kmodule.xsd">
 
-    <kbase name="rules" packages="rules">
-        <ksession name="ksession-rules"/>
+    <kbase name="rules" packages="rules" eventProcessingMode="stream">
+        <ksession name="ksession-rules" type="stateful" clockType="realtime"/>
     </kbase>
 
 </kmodule>

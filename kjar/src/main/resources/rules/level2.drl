@@ -269,3 +269,29 @@ then
     fact.setFlightNumber($fn);
     insert(fact);
 end
+
+// ==================== CEP ====================
+
+rule "Aggregation - Aircraft Not Ready due to Technical Incident"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    TechnicalIncident(flightNumber == $fn)
+    not AircraftNotReady(flightNumber == $fn)
+then
+    AircraftNotReady fact = new AircraftNotReady();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Aggregation - Takeoff Forbidden due to Weather Deterioration"
+salience 400
+when
+    $f : Flight($fn : flightNumber)
+    WeatherDeteriorationAlert(flightNumber == $fn)
+    not TakeoffForbidden(flightNumber == $fn)
+then
+    TakeoffForbidden fact = new TakeoffForbidden();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end

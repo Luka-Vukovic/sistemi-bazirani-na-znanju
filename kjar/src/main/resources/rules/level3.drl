@@ -42,7 +42,7 @@ when
     not Recommendation(flightNumber == $fn)
 then
     Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
-        "CANCEL: Critical weather conditions - crosswind combined with active icing or heavy precipitation.");
+        "CANCEL: Critical weather - crosswind combined with active icing or heavy precipitation.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
@@ -55,7 +55,7 @@ when
     not Recommendation(flightNumber == $fn)
 then
     Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
-        "CANCEL: Temperature below -40°C, engines cannot be started.");
+        "CANCEL: Temperature below -40C, engines cannot be started.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
@@ -94,7 +94,7 @@ when
     not Recommendation(flightNumber == $fn)
 then
     Recommendation rec = new Recommendation(RecommendationAction.CANCEL,
-        "CANCEL: Aircraft not airworthy and no replacement aircraft available.");
+        "CANCEL: Aircraft not airworthy and no replacement available.");
     rec.setFlightNumber($fn);
     insert(rec);
 end
@@ -190,7 +190,7 @@ when
     not Recommendation(flightNumber == $fn)
 then
     Recommendation rec = new Recommendation(RecommendationAction.DELAY,
-        "DELAY: High operational risk - aircraft technical issues combined with adverse weather.");
+        "DELAY: High operational risk - technical issues combined with adverse weather.");
     rec.setFlightNumber($fn);
     insert(rec);
 end

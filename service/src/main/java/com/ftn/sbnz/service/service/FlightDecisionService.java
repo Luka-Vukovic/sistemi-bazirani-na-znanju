@@ -2,7 +2,9 @@ package com.ftn.sbnz.service.service;
 
 import com.ftn.sbnz.model.*;
 import com.ftn.sbnz.model.dto.FlightReportDTO;
-import com.ftn.sbnz.model.dto.UnmetConditionDTO; // <-- Uvezen novi DTO
+import com.ftn.sbnz.model.dto.UnmetConditionDTO;
+import com.ftn.sbnz.model.facts.TechnicalIncident;
+import com.ftn.sbnz.model.facts.WeatherDeteriorationAlert;
 import com.ftn.sbnz.service.util.ConsoleAgendaEventListener;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
@@ -26,6 +28,9 @@ public class FlightDecisionService {
     @Autowired
     private KieContainer kieContainer;
 
+    @Autowired
+    private CepService cepService;
+
     private KieSession buildAndFire(Flight flight, WeatherReport weather, Runway runway,
                                     Airport airport, Crew crew, List<TechnicalAlarm> alarms) {
         KieSession kSession = kieContainer.newKieSession("ksession-rules");
@@ -38,6 +43,22 @@ public class FlightDecisionService {
         kSession.insert(crew);
         for (TechnicalAlarm alarm : alarms) {
             kSession.insert(alarm);
+        }
+
+        int fn = flight.getFlightNumber();
+
+        if (cepService.hasTechnicalIncident(fn)) {
+            TechnicalIncident incident = new TechnicalIncident();
+            incident.setFlightNumber(fn);
+            kSession.insert(incident);
+            logger.info("CEP: TechnicalIncident injected for flight {}", fn);
+        }
+
+        if (cepService.hasWeatherDeteriorationAlert(fn)) {
+            WeatherDeteriorationAlert alert = new WeatherDeteriorationAlert();
+            alert.setFlightNumber(fn);
+            kSession.insert(alert);
+            logger.info("CEP: WeatherDeteriorationAlert injected for flight {}", fn);
         }
 
         kSession.fireAllRules();
@@ -67,24 +88,20 @@ public class FlightDecisionService {
     }
 
     public FlightReportDTO evaluateFlightWithConditions(Flight flight, WeatherReport weather,
-                                                         Runway runway, Airport airport,
-                                                         Crew crew, List<TechnicalAlarm> alarms) {
+                                                        Runway runway, Airport airport,
+                                                        Crew crew, List<TechnicalAlarm> alarms) {
         logger.info("=== FORWARD + BACKWARD: Flight {} ===", flight.getFlightNumber());
 
         KieSession kSession = buildAndFire(flight, weather, runway, airport, crew, alarms);
         Recommendation recommendation = extractRecommendation(kSession, flight.getFlightNumber());
 
-        // Kreiranje liste objekata umesto liste običnih Stringova
         List<UnmetConditionDTO> unmetConditions = new ArrayList<>();
-        
-        // Prosleđujemo dva Variable.v (jedan za naziv deteta, jedan za razlog)
         QueryResults results = kSession.getQueryResults("unmetConditions", "takeoffAllowed", Variable.v, Variable.v);
 
         for (QueryResultsRow row : results) {
             String unmetName = (String) row.get("$child");
             String reason = (String) row.get("$reason");
 
-            // Izbegavanje duplikata kroz Stream API provere naziva uslova
             boolean alreadyExists = unmetConditions.stream().anyMatch(c -> c.getCondition().equals(unmetName));
             if (!alreadyExists) {
                 unmetConditions.add(new UnmetConditionDTO(unmetName, reason != null ? reason : "Description missing."));

@@ -187,7 +187,9 @@ rule "ConditionMet - noCriticalAlarms - false"
 salience 200
 when
     $f : Flight($fn : flightNumber)
-    (TechnicalProblem(flightNumber == $fn) or CriticalAlarmDetected(flightNumber == $fn))
+    (TechnicalProblem(flightNumber == $fn) or 
+     CriticalAlarmDetected(flightNumber == $fn) or
+     TechnicalIncident(flightNumber == $fn))
 then
     insert(new ConditionMet("noCriticalAlarms", false, "active critical or high severity technical alarms on the aircraft"));
 end

@@ -1,0 +1,106 @@
+package rules;
+
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.events.WeatherUpdateEvent;
+import com.ftn.sbnz.model.events.TechnicalAlarmEvent;
+import com.ftn.sbnz.model.enums.AlarmSeverity;
+import com.ftn.sbnz.model.facts.WeatherDeteriorationAlert;
+import com.ftn.sbnz.model.facts.TechnicalIncident;
+
+// ==================== CEP 1: Brzo pogoršanje vremena ====================
+// Dva merenja u 20 minuta gde:
+// - brzina vetra porasla za više od 30 km/h
+// - vidljivost ispod 800m
+// - temperatura ispod 0°C
+
+rule "CEP - Rapid Weather Deterioration"
+when
+    $e1 : WeatherUpdateEvent($fn : flightNumber, $ws1 : windSpeed)
+    $e2 : WeatherUpdateEvent(
+        flightNumber == $fn,
+        windSpeed > $ws1 + 30,
+        visibility < 800,
+        temperature < 0,
+        this after[0s, 20m] $e1
+    )
+then
+    WeatherDeteriorationAlert alert = new WeatherDeteriorationAlert();
+    alert.setFlightNumber($fn);
+    insert(alert);
+    System.out.println(">>> [CEP 1] Flight #" + $fn + ": Rapid weather deterioration detected! Freezing all departures.");
+end
+
+// ==================== CEP 2: Serija tehničkih alarma ====================
+// U roku od 15 minuta:
+// - 5+ LOW alarma, ILI
+// - 3+ MEDIUM alarma, ILI
+// - 2+ HIGH alarma, ILI
+// - 1+ CRITICAL alarm
+
+rule "CEP - Technical Incident - Low Alarms"
+when
+    $f : Flight($fn : flightNumber)
+    Number(intValue >= 5) from accumulate(
+        $e : TechnicalAlarmEvent(
+            flightNumber == $fn,
+            severity == AlarmSeverity.LOW
+        ) over window:time(15m),
+        count($e)
+    )
+then
+    TechnicalIncident incident = new TechnicalIncident();
+    incident.setFlightNumber($fn);
+    insert(incident);
+    System.out.println(">>> [CEP 2] Flight #" + $fn + ": Technical incident - 5+ LOW alarms in 15 minutes!");
+end
+
+rule "CEP - Technical Incident - Medium Alarms"
+when
+    $f : Flight($fn : flightNumber)
+    Number(intValue >= 3) from accumulate(
+        $e : TechnicalAlarmEvent(
+            flightNumber == $fn,
+            severity == AlarmSeverity.MEDIUM
+        ) over window:time(15m),
+        count($e)
+    )
+then
+    TechnicalIncident incident = new TechnicalIncident();
+    incident.setFlightNumber($fn);
+    insert(incident);
+    System.out.println(">>> [CEP 2] Flight #" + $fn + ": Technical incident - 3+ MEDIUM alarms in 15 minutes!");
+end
+
+rule "CEP - Technical Incident - High Alarms"
+when
+    $f : Flight($fn : flightNumber)
+    Number(intValue >= 2) from accumulate(
+        $e : TechnicalAlarmEvent(
+            flightNumber == $fn,
+            severity == AlarmSeverity.HIGH
+        ) over window:time(15m),
+        count($e)
+    )
+then
+    TechnicalIncident incident = new TechnicalIncident();
+    incident.setFlightNumber($fn);
+    insert(incident);
+    System.out.println(">>> [CEP 2] Flight #" + $fn + ": Technical incident - 2+ HIGH alarms in 15 minutes!");
+end
+
+rule "CEP - Technical Incident - Critical Alarm"
+when
+    $f : Flight($fn : flightNumber)
+    Number(intValue >= 1) from accumulate(
+        $e : TechnicalAlarmEvent(
+            flightNumber == $fn,
+            severity == AlarmSeverity.CRITICAL
+        ) over window:time(15m),
+        count($e)
+    )
+then
+    TechnicalIncident incident = new TechnicalIncident();
+    incident.setFlightNumber($fn);
+    insert(incident);
+    System.out.println(">>> [CEP 2] Flight #" + $fn + ": Technical incident - CRITICAL alarm detected!");
+end
