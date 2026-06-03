@@ -31,6 +31,7 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         initFlight101_Cancel();
         initFlight202_Delay_Deicing();
         initFlight303_DepartOnTime();
+        initFlight404_GeneralAviation();
 
         System.out.println("==================================================\n");
     }
@@ -247,4 +248,72 @@ public class DroolsConsoleDemo implements CommandLineRunner {
 
         System.out.println("Flight 303 initialized (expected: DEPART_ON_TIME)");
     }
+
+    private void initFlight404_GeneralAviation() {
+        Aircraft ac404 = new Aircraft();
+        ac404.setAge(5);
+        ac404.setNextServiceDate(LocalDate.now().plusDays(120));
+        ac404.setFlightHoursSinceService(100);
+        ac404.setCyclesSinceService(50);
+        ac404.setTotalFlightHours(2000);
+
+        Flight f404 = new Flight();
+        f404.setFlightNumber(404);
+        f404.setRoute("BEG-NIS");
+        f404.setAircraft(ac404);
+        f404.setCategory(FlightCategory.GENERAL_AVIATION);
+        f404.setStatus(FlightStatus.SCHEDULED);
+        f404.setPlannedDeparture(LocalDateTime.now().plusHours(1));
+        f404.setPlannedArrival(LocalDateTime.now().plusHours(2));
+        f404.setPassengerCount(4);
+        f404.setHasReplacementAircraft(false);
+        f404.setHasReplacementCrew(false);
+
+        WeatherReport w404 = new WeatherReport();
+        w404.setWindSpeed(15);
+        w404.setWindDirection(90);
+        w404.setCrosswind(10);
+        w404.setTailwind(5);
+        w404.setVisibility(5000);
+        w404.setTemperature(15);
+        w404.setDewPoint(5);
+        w404.setPrecipitationType(PrecipitationType.DRY);
+        w404.setPrecipitationIntensity(PrecipitationIntensity.NONE);
+        w404.setIcingPresent(false);
+
+        Runway r404 = new Runway();
+        r404.setStatus(RunwayStatus.OPEN);
+        r404.setRwycc(6);
+        r404.setRunwaysBeingDeiced(false);
+        r404.setDeicingComplete(true);
+
+        Airport a404 = new Airport();
+        a404.setFreeGates(5);
+        a404.setCapacity(20);
+        a404.setTotalRunways(1);
+        a404.setAvailableRunways(1);
+        a404.setRunwayHeading(90);
+        a404.setRunwayLength(600);
+        a404.setLvtoCapability(false);
+        a404.setLvtoPermit(false);
+        a404.setSpecialPermit(false);
+
+        Crew c404 = new Crew();
+        c404.setFlightNumber(404);
+        c404.setComplete(true);
+        c404.setFdp(4);
+        c404.setRestBeforeFlight(16);
+        c404.setSectorsToday(1);
+        c404.setNightDuty(false);
+
+        flightsRepository.put(404, f404);
+        weatherRepository.put(404, w404);
+        runwayRepository.put(404, r404);
+        airportRepository.put(404, a404);
+        crewRepository.put(404, c404);
+        alarmsRepository.put(404, new ArrayList<>());
+
+        System.out.println("Flight 404 initialized (GENERAL_AVIATION - template test)");
+    }
+
 }

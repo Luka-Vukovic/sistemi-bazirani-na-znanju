@@ -1,0 +1,42 @@
+template header
+category
+maxCrosswind
+maxTailwind
+minVisibility
+minRunwayLength
+
+package rules;
+
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.WeatherReport;
+import com.ftn.sbnz.model.Airport;
+import com.ftn.sbnz.model.enums.FlightCategory;
+import com.ftn.sbnz.model.facts.TakeoffForbidden;
+import com.ftn.sbnz.model.facts.RunwayProblem;
+
+template "flightCategoryLimits"
+
+rule "Category Limit - @{category} - Wind/Visibility"
+salience 300
+when
+    $f : Flight($fn : flightNumber, category == FlightCategory.@{category})
+    $w : WeatherReport(crosswind > @{maxCrosswind} || tailwind > @{maxTailwind} || visibility < @{minVisibility})
+then
+    System.out.println(">>> TEMPLATE HIT: crosswind=" + $w.getCrosswind() + " max=@{maxCrosswind} | tailwind=" + $w.getTailwind() + " max=@{maxTailwind} | visibility=" + $w.getVisibility() + " min=@{minVisibility}");
+    TakeoffForbidden fact = new TakeoffForbidden();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Category Limit - @{category} - Runway Length"
+salience 300
+when
+    $f : Flight($fn : flightNumber, category == FlightCategory.@{category})
+    Airport(runwayLength < @{minRunwayLength})
+then
+    RunwayProblem fact = new RunwayProblem();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+end template

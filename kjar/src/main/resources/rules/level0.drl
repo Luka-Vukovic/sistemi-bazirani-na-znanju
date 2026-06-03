@@ -21,6 +21,7 @@ then
     insert(new Condition("takeoffAllowed", "runwayReady"));
     insert(new Condition("takeoffAllowed", "aircraftReady"));
     insert(new Condition("takeoffAllowed", "crewCapable"));
+    insert(new Condition("takeoffAllowed", "categoryLimitsRespected"));
 
     // Weather
     insert(new Condition("weatherPermits", "windAcceptable"));
@@ -179,6 +180,7 @@ when
     $f : Flight($fn : flightNumber)
     not TechnicalProblem(flightNumber == $fn)
     not CriticalAlarmDetected(flightNumber == $fn)
+    not TechnicalIncident(flightNumber == $fn)
 then
     insert(new ConditionMet("noCriticalAlarms", true));
 end
@@ -187,7 +189,7 @@ rule "ConditionMet - noCriticalAlarms - false"
 salience 200
 when
     $f : Flight($fn : flightNumber)
-    (TechnicalProblem(flightNumber == $fn) or 
+    (TechnicalProblem(flightNumber == $fn) or
      CriticalAlarmDetected(flightNumber == $fn) or
      TechnicalIncident(flightNumber == $fn))
 then
@@ -292,4 +294,27 @@ when
     InsufficientRest(flightNumber == $fn)
 then
     insert(new ConditionMet("restSufficient", false, "insufficient crew rest period before flight: " + $c.getRestBeforeFlight() + "h (minimum 12h)"));
+end
+
+// ==================== CONDITION MET — CATEGORY LIMITS ====================
+
+rule "ConditionMet - categoryLimitsRespected - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not TakeoffForbidden(flightNumber == $fn)
+    not RunwayProblem(flightNumber == $fn)
+then
+    insert(new ConditionMet("categoryLimitsRespected", true));
+end
+
+rule "ConditionMet - categoryLimitsRespected - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    $w : WeatherReport()
+    (TakeoffForbidden(flightNumber == $fn) or RunwayProblem(flightNumber == $fn))
+then
+    String msg = "flight category operational limits exceeded (wind, visibility or runway length)";
+    insert(new ConditionMet("categoryLimitsRespected", false, msg));
 end
