@@ -48,12 +48,21 @@ public class DroolsConfiguration {
             );
         }
 
-        // Generiši i učitaj template DRL
-        String generatedDrl = generateCategoryDrl();
-        System.out.println("=== GENERATED TEMPLATE DRL ===\n" + generatedDrl);
+        // Generiši i učitaj flight category template DRL
+        String generatedCategoryDrl = generateCategoryDrl();
+        System.out.println("=== GENERATED FLIGHT CATEGORY DRL ===\n" + generatedCategoryDrl);
         kieFileSystem.write(
             "src/main/resources/rules/generated-category.drl",
-            ResourceFactory.newByteArrayResource(generatedDrl.getBytes())
+            ResourceFactory.newByteArrayResource(generatedCategoryDrl.getBytes())
+                .setResourceType(ResourceType.DRL)
+        );
+
+        // Generiši i učitaj runway status template DRL
+        String generatedRunwayDrl = generateRunwayStatusDrl();
+        System.out.println("=== GENERATED RUNWAY STATUS DRL ===\n" + generatedRunwayDrl);
+        kieFileSystem.write(
+            "src/main/resources/rules/generated-runway-status.drl",
+            ResourceFactory.newByteArrayResource(generatedRunwayDrl.getBytes())
                 .setResourceType(ResourceType.DRL)
         );
 
@@ -73,7 +82,18 @@ public class DroolsConfiguration {
         InputStream excelStream = getClass().getResourceAsStream("/rules/flight-category.xlsx");
 
         if (templateStream == null || excelStream == null) {
-            throw new RuntimeException("Template or Excel file not found in classpath.");
+            throw new RuntimeException("Flight category template or Excel file not found.");
+        }
+
+        return TemplateLoader.generateDrl(templateStream, excelStream);
+    }
+
+    private String generateRunwayStatusDrl() throws Exception {
+        InputStream templateStream = getClass().getResourceAsStream("/rules/runway-status.drt");
+        InputStream excelStream = getClass().getResourceAsStream("/rules/runway-status.xlsx");
+
+        if (templateStream == null || excelStream == null) {
+            throw new RuntimeException("Runway status template or Excel file not found.");
         }
 
         return TemplateLoader.generateDrl(templateStream, excelStream);

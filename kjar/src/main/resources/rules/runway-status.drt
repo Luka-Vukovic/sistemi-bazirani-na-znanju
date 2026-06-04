@@ -1,0 +1,41 @@
+template header
+status
+takeoffAllowed
+maxCrosswind
+cleaningPriority
+
+package rules;
+
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.WeatherReport;
+import com.ftn.sbnz.model.Runway;
+import com.ftn.sbnz.model.enums.RunwayStatus;
+import com.ftn.sbnz.model.facts.RunwayUnavailable;
+
+template "runwayStatusLimits"
+
+rule "Runway Status - @{status} - Takeoff Check"
+salience 300
+when
+    $f : Flight($fn : flightNumber)
+    Runway(status == RunwayStatus.@{status})
+    eval(@{takeoffAllowed} == 0)
+then
+    RunwayUnavailable fact = new RunwayUnavailable();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+rule "Runway Status - @{status} - Crosswind Check"
+salience 300
+when
+    $f : Flight($fn : flightNumber)
+    Runway(status == RunwayStatus.@{status})
+    WeatherReport(crosswind > @{maxCrosswind})
+then
+    RunwayUnavailable fact = new RunwayUnavailable();
+    fact.setFlightNumber($fn);
+    insert(fact);
+end
+
+end template

@@ -25,13 +25,14 @@ public class DroolsConsoleDemo implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         System.out.println("==================================================");
-        System.out.println("   INITIALIZING FLIGHTS IN REPOSITORY             ");
+        System.out.println("   INITIALIZING FLIGHTS          ");
         System.out.println("==================================================\n");
 
         initFlight101_Cancel();
         initFlight202_Delay_Deicing();
         initFlight303_DepartOnTime();
         initFlight404_GeneralAviation();
+        initFlight505_RunwayMaintenance();
 
         System.out.println("==================================================\n");
     }
@@ -314,6 +315,73 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         alarmsRepository.put(404, new ArrayList<>());
 
         System.out.println("Flight 404 initialized (GENERAL_AVIATION - template test)");
+    }
+
+    private void initFlight505_RunwayMaintenance() {
+        Aircraft ac505 = new Aircraft();
+        ac505.setAge(5);
+        ac505.setNextServiceDate(LocalDate.now().plusDays(120));
+        ac505.setFlightHoursSinceService(100);
+        ac505.setCyclesSinceService(50);
+        ac505.setTotalFlightHours(2000);
+
+        Flight f505 = new Flight();
+        f505.setFlightNumber(505);
+        f505.setRoute("BEG-SKP");
+        f505.setAircraft(ac505);
+        f505.setCategory(FlightCategory.SCHEDULED_COMMERCIAL);
+        f505.setStatus(FlightStatus.SCHEDULED);
+        f505.setPlannedDeparture(LocalDateTime.now().plusHours(1));
+        f505.setPlannedArrival(LocalDateTime.now().plusHours(2));
+        f505.setPassengerCount(120);
+        f505.setHasReplacementAircraft(false);
+        f505.setHasReplacementCrew(false);
+
+        WeatherReport w505 = new WeatherReport();
+        w505.setWindSpeed(20);
+        w505.setWindDirection(90);
+        w505.setCrosswind(15);
+        w505.setTailwind(5);
+        w505.setVisibility(8000);
+        w505.setTemperature(18);
+        w505.setDewPoint(5);
+        w505.setPrecipitationType(PrecipitationType.DRY);
+        w505.setPrecipitationIntensity(PrecipitationIntensity.NONE);
+        w505.setIcingPresent(false);
+
+        Runway r505 = new Runway();
+        r505.setStatus(RunwayStatus.MAINTENANCE); // template treba da detektuje ovo
+        r505.setRwycc(6);
+        r505.setRunwaysBeingDeiced(false);
+        r505.setDeicingComplete(true);
+
+        Airport a505 = new Airport();
+        a505.setFreeGates(5);
+        a505.setCapacity(50);
+        a505.setTotalRunways(2);
+        a505.setAvailableRunways(2);
+        a505.setRunwayHeading(90);
+        a505.setRunwayLength(3000);
+        a505.setLvtoCapability(true);
+        a505.setLvtoPermit(true);
+        a505.setSpecialPermit(false);
+
+        Crew c505 = new Crew();
+        c505.setFlightNumber(505);
+        c505.setComplete(true);
+        c505.setFdp(6);
+        c505.setRestBeforeFlight(14);
+        c505.setSectorsToday(1);
+        c505.setNightDuty(false);
+
+        flightsRepository.put(505, f505);
+        weatherRepository.put(505, w505);
+        runwayRepository.put(505, r505);
+        airportRepository.put(505, a505);
+        crewRepository.put(505, c505);
+        alarmsRepository.put(505, new ArrayList<>());
+
+        System.out.println("Flight 505 initialized (expected: CANCEL - runway in maintenance)");
     }
 
 }

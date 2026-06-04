@@ -24,7 +24,6 @@ public class CepService {
     @Autowired
     private KieContainer kieContainer;
 
-    // Jedna dugotrajna sesija po letu
     private final Map<Integer, KieSession> sessions = new HashMap<>();
 
     public KieSession getOrCreateSession(int flightNumber, Flight flight) {

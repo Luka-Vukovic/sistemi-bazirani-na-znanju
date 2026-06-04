@@ -13,14 +13,12 @@ public class TemplateLoader {
         Workbook workbook = new XSSFWorkbook(excelStream);
         Sheet sheet = workbook.getSheetAt(0);
 
-        // Čitaj header
         Row headerRow = sheet.getRow(0);
         List<String> headers = new ArrayList<>();
         for (Cell cell : headerRow) {
             headers.add(cell.getStringCellValue());
         }
 
-        // Čitaj redove podataka
         List<Map<String, Object>> rows = new ArrayList<>();
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);

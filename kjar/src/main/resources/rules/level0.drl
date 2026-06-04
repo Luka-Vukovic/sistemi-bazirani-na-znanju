@@ -5,11 +5,12 @@ import com.ftn.sbnz.model.Condition;
 import com.ftn.sbnz.model.ConditionMet;
 import com.ftn.sbnz.model.WeatherReport;
 import com.ftn.sbnz.model.Runway;
+import com.ftn.sbnz.model.Airport;
 import com.ftn.sbnz.model.Crew;
 import com.ftn.sbnz.model.Aircraft;
 import com.ftn.sbnz.model.facts.*;
 
-// ==================== CONDITION TREE ====================
+// Condition tree
 
 rule "Backward - Insert Condition Tree"
 salience 1000
@@ -30,8 +31,9 @@ then
     insert(new Condition("weatherPermits", "precipitationSafe"));
 
     // Runway
-    insert(new Condition("runwayReady", "runwayNotClosed"));
+    insert(new Condition("runwayReady", "runwayStatusAcceptable"));
     insert(new Condition("runwayReady", "runwayRwyccAcceptable"));
+    insert(new Condition("runwayReady", "runwayLengthSufficient"));
 
     // Aircraft
     insert(new Condition("aircraftReady", "noCriticalAlarms"));
@@ -43,8 +45,6 @@ then
     insert(new Condition("crewCapable", "fdpNotExceeded"));
     insert(new Condition("crewCapable", "restSufficient"));
 end
-
-// ==================== CONDITION MET — WEATHER ====================
 
 rule "ConditionMet - windAcceptable - true"
 salience 200
@@ -126,30 +126,30 @@ salience 200
 when
     $f : Flight($fn : flightNumber)
     $w : WeatherReport()
-    (FreezingRain(flightNumber == $fn) or Hail(flightNumber == $fn) or IcePellets(flightNumber == $fn) or HeavySnow(flightNumber == $fn))
+    (FreezingRain(flightNumber == $fn) or Hail(flightNumber == $fn) or
+     IcePellets(flightNumber == $fn) or HeavySnow(flightNumber == $fn))
 then
     insert(new ConditionMet("precipitationSafe", false, "hazardous precipitation: " + $w.getPrecipitationType() + " (" + $w.getPrecipitationIntensity() + ")"));
 end
 
-// ==================== CONDITION MET — RUNWAY ====================
-
-rule "ConditionMet - runwayNotClosed - true"
+rule "ConditionMet - runwayStatusAcceptable - true"
 salience 200
 when
     $f : Flight($fn : flightNumber)
     not RunwayUnavailable(flightNumber == $fn)
 then
-    insert(new ConditionMet("runwayNotClosed", true));
+    insert(new ConditionMet("runwayStatusAcceptable", true));
 end
 
-rule "ConditionMet - runwayNotClosed - false"
+rule "ConditionMet - runwayStatusAcceptable - false"
 salience 200
 when
     $f : Flight($fn : flightNumber)
     $r : Runway()
     RunwayUnavailable(flightNumber == $fn)
 then
-    insert(new ConditionMet("runwayNotClosed", false, "runway is out of service. Status: " + $r.getStatus()));
+    insert(new ConditionMet("runwayStatusAcceptable", false,
+        "runway is not available for takeoff. Status: " + $r.getStatus()));
 end
 
 rule "ConditionMet - runwayRwyccAcceptable - true"
@@ -169,10 +169,29 @@ when
     $r : Runway()
     (RunwayCritical(flightNumber == $fn) or RunwayRisky(flightNumber == $fn))
 then
-    insert(new ConditionMet("runwayRwyccAcceptable", false, "runway condition code (RWYCC) is critical: " + $r.getRwycc() + " (must be >= 4)"));
+    insert(new ConditionMet("runwayRwyccAcceptable", false,
+        "runway condition code (RWYCC) is critical: " + $r.getRwycc() + " (must be >= 4)"));
 end
 
-// ==================== CONDITION MET — AIRCRAFT ====================
+rule "ConditionMet - runwayLengthSufficient - true"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    not RunwayProblem(flightNumber == $fn)
+then
+    insert(new ConditionMet("runwayLengthSufficient", true));
+end
+
+rule "ConditionMet - runwayLengthSufficient - false"
+salience 200
+when
+    $f : Flight($fn : flightNumber)
+    $a : Airport()
+    RunwayProblem(flightNumber == $fn)
+then
+    insert(new ConditionMet("runwayLengthSufficient", false,
+        "runway length insufficient for this flight category: " + $a.getRunwayLength() + "m"));
+end
 
 rule "ConditionMet - noCriticalAlarms - true"
 salience 200
@@ -193,7 +212,8 @@ when
      CriticalAlarmDetected(flightNumber == $fn) or
      TechnicalIncident(flightNumber == $fn))
 then
-    insert(new ConditionMet("noCriticalAlarms", false, "active critical or high severity technical alarms on the aircraft"));
+    insert(new ConditionMet("noCriticalAlarms", false,
+        "active critical or high severity technical alarms on the aircraft"));
 end
 
 rule "ConditionMet - melCategoryOk - true"
@@ -212,7 +232,8 @@ when
     $f : Flight($fn : flightNumber)
     (MelCategoryA(flightNumber == $fn) or UnexpectedFailure(flightNumber == $fn))
 then
-    insert(new ConditionMet("melCategoryOk", false, "non-MEL or Category A failures prevent safe takeoff"));
+    insert(new ConditionMet("melCategoryOk", false,
+        "non-MEL or Category A failures prevent safe takeoff"));
 end
 
 rule "ConditionMet - serviceNotExceeded - true"
@@ -232,11 +253,10 @@ when
     $ac : Aircraft()
     (ACheckExceeded(flightNumber == $fn) or CalendarServiceExceeded(flightNumber == $fn))
 then
-    String msg = "service interval exceeded: " + $ac.getFlightHoursSinceService() + "h since last service (limit 600h) or next date: " + $ac.getNextServiceDate();
+    String msg = "service interval exceeded: " + $ac.getFlightHoursSinceService() +
+        "h since last service (limit 600h) or next date: " + $ac.getNextServiceDate();
     insert(new ConditionMet("serviceNotExceeded", false, msg));
 end
-
-// ==================== CONDITION MET — CREW ====================
 
 rule "ConditionMet - crewComplete - true"
 salience 200
@@ -253,7 +273,8 @@ when
     $f : Flight($fn : flightNumber)
     CrewIncomplete(flightNumber == $fn)
 then
-    insert(new ConditionMet("crewComplete", false, "crew composition is incomplete for this flight operation"));
+    insert(new ConditionMet("crewComplete", false,
+        "crew composition is incomplete for this flight operation"));
 end
 
 rule "ConditionMet - fdpNotExceeded - true"
@@ -273,7 +294,8 @@ when
     $c : Crew(flightNumber == $fn)
     (CrewExceededLimit(flightNumber == $fn) or CrewOverloaded(flightNumber == $fn))
 then
-    String msg = "crew flight duty period limit exceeded. Current FDP: " + $c.getFdp() + "h, sectors today: " + $c.getSectorsToday();
+    String msg = "crew flight duty period limit exceeded. Current FDP: " +
+        $c.getFdp() + "h, sectors today: " + $c.getSectorsToday();
     insert(new ConditionMet("fdpNotExceeded", false, msg));
 end
 
@@ -293,17 +315,15 @@ when
     $c : Crew(flightNumber == $fn)
     InsufficientRest(flightNumber == $fn)
 then
-    insert(new ConditionMet("restSufficient", false, "insufficient crew rest period before flight: " + $c.getRestBeforeFlight() + "h (minimum 12h)"));
+    insert(new ConditionMet("restSufficient", false,
+        "insufficient crew rest period before flight: " + $c.getRestBeforeFlight() + "h (minimum 12h)"));
 end
-
-// ==================== CONDITION MET — CATEGORY LIMITS ====================
 
 rule "ConditionMet - categoryLimitsRespected - true"
 salience 200
 when
     $f : Flight($fn : flightNumber)
     not TakeoffForbidden(flightNumber == $fn)
-    not RunwayProblem(flightNumber == $fn)
 then
     insert(new ConditionMet("categoryLimitsRespected", true));
 end
@@ -313,7 +333,7 @@ salience 200
 when
     $f : Flight($fn : flightNumber)
     $w : WeatherReport()
-    (TakeoffForbidden(flightNumber == $fn) or RunwayProblem(flightNumber == $fn))
+    TakeoffForbidden(flightNumber == $fn)
 then
     String msg = "flight category operational limits exceeded (wind, visibility or runway length)";
     insert(new ConditionMet("categoryLimitsRespected", false, msg));

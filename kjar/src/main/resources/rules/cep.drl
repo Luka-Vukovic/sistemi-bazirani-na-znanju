@@ -7,7 +7,7 @@ import com.ftn.sbnz.model.enums.AlarmSeverity;
 import com.ftn.sbnz.model.facts.WeatherDeteriorationAlert;
 import com.ftn.sbnz.model.facts.TechnicalIncident;
 
-// ==================== CEP 1: Brzo pogoršanje vremena ====================
+// CEP 1: Brzo pogoršanje vremena
 // Dva merenja u 20 minuta gde:
 // - brzina vetra porasla za više od 30 km/h
 // - vidljivost ispod 800m
@@ -30,7 +30,7 @@ then
     System.out.println(">>> [CEP 1] Flight #" + $fn + ": Rapid weather deterioration detected! Freezing all departures.");
 end
 
-// ==================== CEP 2: Serija tehničkih alarma ====================
+// CEP 2: Serija tehničkih alarma
 // U roku od 15 minuta:
 // - 5+ LOW alarma, ILI
 // - 3+ MEDIUM alarma, ILI
