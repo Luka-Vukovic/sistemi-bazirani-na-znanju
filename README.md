@@ -538,3 +538,7 @@ Scenario: Let JU-301, Beograd → London, 14:00, SCHEDULED_COMMERCIAL
 - Simple Flying — Flight Time Limitation rules: https://simpleflying.com/cabin-crew-hours-rules-regulations/
 - Wikipedia — Aircraft maintenance checks: https://en.wikipedia.org/wiki/Aircraft_maintenance_checks
 - FAR 91.155 — Basic VFR weather minimums: https://www.law.cornell.edu/cfr/text/14/91.155
+- UK Civil Aviation Authority - Contaminated Runway Reporting System: https://www.caa.co.uk/commercial-industry/aerodromes/safety/runways/contaminated-runway-reporting-system/
+- FAA Frost Holdover Time Guidelines: https://www.scribd.com/document/972929008/Cold-Weather-Operation-HOT-PROC
+- Aviatize - EASA Flight Time Limitations Glossary: https://www.aviatize.com/glossary/easa-ftl
+- AviationHunt - MMEL and MEL Architecture Guide: https://www.aviationhunt.com/mmel-vs-mel-definitive-guide/
