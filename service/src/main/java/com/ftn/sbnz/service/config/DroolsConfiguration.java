@@ -20,7 +20,8 @@ public class DroolsConfiguration {
         "/rules/level2.drl",
         "/rules/level3.drl",
         "/rules/backward.drl",
-        "/rules/cep.drl"
+        "/rules/cep.drl",
+        "/rules/accumulate/accumulate.drl"   // <-- dodato
     };
 
     @Bean
@@ -28,14 +29,12 @@ public class DroolsConfiguration {
         KieServices kieServices = KieServices.Factory.get();
         KieFileSystem kieFileSystem = kieServices.newKieFileSystem();
 
-        // Učitaj kmodule.xml
         InputStream kmoduleStream = getClass().getResourceAsStream("/META-INF/kmodule.xml");
         if (kmoduleStream == null) {
             throw new RuntimeException("kmodule.xml not found in classpath.");
         }
         kieFileSystem.writeKModuleXML(new String(kmoduleStream.readAllBytes()));
 
-        // Učitaj sve .drl fajlove
         for (String drlPath : DRL_FILES) {
             InputStream drlStream = getClass().getResourceAsStream(drlPath);
             if (drlStream == null) {
@@ -48,7 +47,6 @@ public class DroolsConfiguration {
             );
         }
 
-        // Generiši i učitaj flight category template DRL
         String generatedCategoryDrl = generateCategoryDrl();
         System.out.println("=== GENERATED FLIGHT CATEGORY DRL ===\n" + generatedCategoryDrl);
         kieFileSystem.write(
@@ -57,12 +55,19 @@ public class DroolsConfiguration {
                 .setResourceType(ResourceType.DRL)
         );
 
-        // Generiši i učitaj runway status template DRL
         String generatedRunwayDrl = generateRunwayStatusDrl();
         System.out.println("=== GENERATED RUNWAY STATUS DRL ===\n" + generatedRunwayDrl);
         kieFileSystem.write(
             "src/main/resources/rules/generated-runway-status.drl",
             ResourceFactory.newByteArrayResource(generatedRunwayDrl.getBytes())
+                .setResourceType(ResourceType.DRL)
+        );
+
+        String generatedAlarmDrl = generateAlarmSeverityDrl();
+        System.out.println("=== GENERATED ALARM SEVERITY DRL ===\n" + generatedAlarmDrl);
+        kieFileSystem.write(
+            "src/main/resources/rules/generated-alarm-severity.drl",
+            ResourceFactory.newByteArrayResource(generatedAlarmDrl.getBytes())
                 .setResourceType(ResourceType.DRL)
         );
 
@@ -80,22 +85,27 @@ public class DroolsConfiguration {
     private String generateCategoryDrl() throws Exception {
         InputStream templateStream = getClass().getResourceAsStream("/rules/flight-category.drt");
         InputStream excelStream = getClass().getResourceAsStream("/rules/flight-category.xlsx");
-
         if (templateStream == null || excelStream == null) {
             throw new RuntimeException("Flight category template or Excel file not found.");
         }
-
         return TemplateLoader.generateDrl(templateStream, excelStream);
     }
 
     private String generateRunwayStatusDrl() throws Exception {
         InputStream templateStream = getClass().getResourceAsStream("/rules/runway-status.drt");
         InputStream excelStream = getClass().getResourceAsStream("/rules/runway-status.xlsx");
-
         if (templateStream == null || excelStream == null) {
             throw new RuntimeException("Runway status template or Excel file not found.");
         }
+        return TemplateLoader.generateDrl(templateStream, excelStream);
+    }
 
+    private String generateAlarmSeverityDrl() throws Exception {
+        InputStream templateStream = getClass().getResourceAsStream("/rules/alarm-severity.drt");
+        InputStream excelStream = getClass().getResourceAsStream("/rules/alarm-severity.xlsx");
+        if (templateStream == null || excelStream == null) {
+            throw new RuntimeException("Alarm severity template or Excel file not found.");
+        }
         return TemplateLoader.generateDrl(templateStream, excelStream);
     }
 }

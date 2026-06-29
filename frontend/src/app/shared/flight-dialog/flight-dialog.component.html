@@ -1,0 +1,332 @@
+<!-- DELETE -->
+<div class="dialog-container" *ngIf="data.mode === 'delete'">
+  <div class="dialog-header danger">
+    <div class="dialog-title-row">
+      <mat-icon>delete_forever</mat-icon>
+      <h2>Delete Flight</h2>
+    </div>
+  </div>
+  <div class="dialog-body">
+    <p class="delete-msg">
+      Are you sure you want to delete flight
+      <strong class="mono">#{{ data.flight.flightNumber }} — {{ data.flight.route }}</strong>?
+    </p>
+    <p class="delete-sub">This action cannot be undone.</p>
+  </div>
+  <div class="dialog-footer">
+    <button class="btn-cancel" (click)="dialogRef.close()">Cancel</button>
+    <button class="btn-danger" (click)="confirmDelete()" [disabled]="saving">
+      <mat-spinner diameter="16" *ngIf="saving"></mat-spinner>
+      Delete Flight
+    </button>
+  </div>
+</div>
+
+<!-- CREATE / EDIT -->
+<div class="dialog-container wide" *ngIf="data.mode !== 'delete'">
+  <div class="dialog-header">
+    <div class="dialog-title-row">
+      <mat-icon>{{ data.mode === 'create' ? 'add_circle' : 'edit' }}</mat-icon>
+      <h2>{{ data.mode === 'create' ? 'New Flight' : 'Edit Flight #' + form.flightNumber }}</h2>
+    </div>
+    <button class="icon-btn" (click)="dialogRef.close()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <div class="dialog-body scrollable">
+    <mat-tab-group class="form-tabs">
+
+      <!-- TAB 1: Flight & Aircraft -->
+      <mat-tab label="Flight">
+        <div class="tab-content">
+          <div class="form-row">
+            <div class="field">
+              <label>Flight Number *</label>
+              <input type="number" [(ngModel)]="form.flightNumber" class="field-input mono"
+                     [disabled]="data.mode === 'edit'" />
+            </div>
+            <div class="field">
+              <label>Route *</label>
+              <input type="text" [(ngModel)]="form.route" class="field-input mono" placeholder="BEG-LHR" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Category *</label>
+              <select [(ngModel)]="form.category" class="field-select">
+                <option value="SCHEDULED_COMMERCIAL">Scheduled Commercial</option>
+                <option value="BUSINESS_AVIATION">Business Aviation</option>
+                <option value="CARGO">Cargo</option>
+                <option value="GENERAL_AVIATION">General Aviation</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Status *</label>
+              <select [(ngModel)]="form.status" class="field-select">
+                <option value="SCHEDULED">Scheduled</option>
+                <option value="ON_TIME">On Time</option>
+                <option value="DELAYED">Delayed</option>
+                <option value="CANCELLED">Cancelled</option>
+                <option value="BOARDED">Boarded</option>
+                <option value="DEPARTED">Departed</option>
+                <option value="REDIRECTED">Redirected</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Planned Departure *</label>
+              <input type="datetime-local" [(ngModel)]="form.plannedDeparture" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Planned Arrival *</label>
+              <input type="datetime-local" [(ngModel)]="form.plannedArrival" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Passengers *</label>
+              <input type="number" [(ngModel)]="form.passengerCount" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Delay (min)</label>
+              <input type="number" [(ngModel)]="form.delayMinutes" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.hasReplacementAircraft" />
+              Replacement Aircraft
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.hasReplacementCrew" />
+              Replacement Crew
+            </label>
+          </div>
+
+          <div class="section-title">Aircraft</div>
+          <div class="form-row">
+            <div class="field">
+              <label>Age (years) *</label>
+              <input type="number" [(ngModel)]="form.aircraft.age" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Total Flight Hours *</label>
+              <input type="number" [(ngModel)]="form.aircraft.totalFlightHours" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Hours Since Service *</label>
+              <input type="number" [(ngModel)]="form.aircraft.flightHoursSinceService" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Cycles Since Service *</label>
+              <input type="number" [(ngModel)]="form.aircraft.cyclesSinceService" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Next Service Date *</label>
+              <input type="date" [(ngModel)]="form.aircraft.nextServiceDate" class="field-input mono" />
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 2: Weather -->
+      <mat-tab label="Weather">
+        <div class="tab-content">
+          <div class="form-row">
+            <div class="field">
+              <label>Wind Speed (km/h) *</label>
+              <input type="number" [(ngModel)]="form.weather.windSpeed" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Wind Direction (°) *</label>
+              <input type="number" [(ngModel)]="form.weather.windDirection" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Crosswind (km/h) *</label>
+              <input type="number" [(ngModel)]="form.weather.crosswind" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Tailwind (km/h) *</label>
+              <input type="number" [(ngModel)]="form.weather.tailwind" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Visibility (m) *</label>
+              <input type="number" [(ngModel)]="form.weather.visibility" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Temperature (°C) *</label>
+              <input type="number" [(ngModel)]="form.weather.temperature" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Dew Point (°C) *</label>
+              <input type="number" [(ngModel)]="form.weather.dewPoint" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Precipitation Type *</label>
+              <select [(ngModel)]="form.weather.precipitationType" class="field-select">
+                <option value="NONE">None</option>
+                <option value="DRY">Dry</option>
+                <option value="RAIN">Rain</option>
+                <option value="SNOW">Snow</option>
+                <option value="FREEZING_RAIN">Freezing Rain</option>
+                <option value="HAIL">Hail</option>
+                <option value="ICE_PELLETS">Ice Pellets</option>
+                <option value="FOG">Fog</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Precipitation Intensity *</label>
+              <select [(ngModel)]="form.weather.precipitationIntensity" class="field-select">
+                <option value="NONE">None</option>
+                <option value="LIGHT">Light</option>
+                <option value="MODERATE">Moderate</option>
+                <option value="HEAVY">Heavy</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.weather.icingPresent" />
+              Icing Present
+            </label>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 3: Runway & Airport -->
+      <mat-tab label="Runway & Airport">
+        <div class="tab-content">
+          <div class="section-title">Runway</div>
+          <div class="form-row">
+            <div class="field">
+              <label>Status *</label>
+              <select [(ngModel)]="form.runway.status" class="field-select">
+                <option value="OPEN">Open</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>RWYCC (0–6) *</label>
+              <input type="number" min="0" max="6" [(ngModel)]="form.runway.rwycc" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.runway.runwaysBeingDeiced" />
+              Runways Being De-iced
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.runway.deicingComplete" />
+              De-icing Complete
+            </label>
+          </div>
+
+          <div class="section-title">Airport</div>
+          <div class="form-row">
+            <div class="field">
+              <label>Total Runways *</label>
+              <input type="number" [(ngModel)]="form.airport.totalRunways" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Available Runways *</label>
+              <input type="number" [(ngModel)]="form.airport.availableRunways" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Runway Length (m) *</label>
+              <input type="number" [(ngModel)]="form.airport.runwayLength" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Runway Heading (°) *</label>
+              <input type="number" [(ngModel)]="form.airport.runwayHeading" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Free Gates *</label>
+              <input type="number" [(ngModel)]="form.airport.freeGates" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Capacity *</label>
+              <input type="number" [(ngModel)]="form.airport.capacity" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.airport.lvtoCapability" />
+              LVTO Capability
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.airport.lvtoPermit" />
+              LVTO Permit
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.airport.specialPermit" />
+              Special Permit
+            </label>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- TAB 4: Crew -->
+      <mat-tab label="Crew">
+        <div class="tab-content">
+          <div class="form-row checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.crew.complete" />
+              Crew Complete
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.crew.nightDuty" />
+              Night Duty
+            </label>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>FDP (hours) *</label>
+              <input type="number" step="0.5" [(ngModel)]="form.crew.fdp" class="field-input mono" />
+            </div>
+            <div class="field">
+              <label>Rest Before Flight (hours) *</label>
+              <input type="number" step="0.5" [(ngModel)]="form.crew.restBeforeFlight" class="field-input mono" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Sectors Today *</label>
+              <input type="number" [(ngModel)]="form.crew.sectorsToday" class="field-input mono" />
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+
+    <div class="error-msg" *ngIf="errorMsg">
+      <mat-icon>error_outline</mat-icon> {{ errorMsg }}
+    </div>
+  </div>
+
+  <div class="dialog-footer">
+    <button class="btn-cancel" (click)="dialogRef.close()">Cancel</button>
+    <button class="btn-save" (click)="save()" [disabled]="saving">
+      <mat-spinner diameter="16" *ngIf="saving"></mat-spinner>
+      <mat-icon *ngIf="!saving">save</mat-icon>
+      {{ saving ? 'Saving...' : (data.mode === 'create' ? 'Create Flight' : 'Save Changes') }}
+    </button>
+  </div>
+</div>

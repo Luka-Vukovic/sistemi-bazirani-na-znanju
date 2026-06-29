@@ -1,0 +1,71 @@
+package rules.accumulate;
+
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.WeatherReport;
+import com.ftn.sbnz.model.AccumulateResult;
+import com.ftn.sbnz.model.enums.FlightStatus;
+import java.time.LocalDate;
+
+rule "Accumulate - Total Delay and Delayed Flight Count"
+salience 300
+when
+    accumulate(
+        $f : Flight(
+            status == FlightStatus.DELAYED,
+            plannedDeparture != null,
+            plannedDeparture.toLocalDate().isEqual(LocalDate.now())
+        );
+        $totalDelay : sum($f.getDelayMinutes()),
+        $count      : count($f)
+    )
+then
+    AccumulateResult result = new AccumulateResult();
+    result.setTotalDelayMinutes($totalDelay.longValue());
+    result.setDelayedFlightsCount($count.longValue());
+    insert(result);
+    System.out.println("[Accumulate 1] Delayed flights today: " + $count +
+        ", total delay: " + $totalDelay + " min");
+end
+
+rule "Accumulate - Affected Passengers Cancelled"
+salience 250
+when
+    $result : AccumulateResult()
+    accumulate(
+        $f : Flight( status == FlightStatus.CANCELLED );
+        $cancelledPax : sum($f.getPassengerCount())
+    )
+then
+    $result.setAffectedPassengers($cancelledPax.longValue());
+    update($result);
+    System.out.println("[Accumulate 2a] Cancelled passengers: " + $cancelledPax);
+end
+
+rule "Accumulate - Affected Passengers Long Delay"
+salience 200
+when
+    $result : AccumulateResult()
+    accumulate(
+        $f : Flight( status != FlightStatus.CANCELLED, delayMinutes > 120 );
+        $delayedPax : sum($f.getPassengerCount())
+    )
+then
+    long current = $result.getAffectedPassengers();
+    $result.setAffectedPassengers(current + $delayedPax.longValue());
+    update($result);
+    System.out.println("[Accumulate 2b] Long delay passengers: " + $delayedPax);
+end
+
+rule "Accumulate - Average Visibility"
+salience 100
+when
+    $result : AccumulateResult()
+    accumulate(
+        $w : WeatherReport();
+        $avg : average($w.getVisibility())
+    )
+then
+    $result.setAvgVisibility($avg.doubleValue());
+    update($result);
+    System.out.println("[Accumulate 3] Average visibility: " + $avg + "m");
+end

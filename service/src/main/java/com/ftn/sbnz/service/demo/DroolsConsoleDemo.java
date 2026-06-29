@@ -34,11 +34,20 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         initFlight404_GeneralAviation();
         initFlight505_RunwayMaintenance();
 
+        System.out.println("==================================================");
+        System.out.println("\nACCUMULATE EXPECTED RESULTS:");
+        System.out.println("  delayedFlightsCount : 3  (letovi 101, 202, 505 — status DELAYED, poletanje danas)");
+        System.out.println("  totalDelayMinutes   : 285  (90 + 150 + 45)");
+        System.out.println("  affectedPassengers  : 154  (let 202: 150 putnika kasni >120min + let 404: 4 putnika CANCELLED)");
+        System.out.println("  avgVisibility       : prosek vidljivosti sva 5 leta");
+        System.out.println("  = (40 + 3000 + 10000 + 5000 + 8000) / 5 = 5208.0m");
         System.out.println("==================================================\n");
     }
 
     // -------------------------------------------------------
     // Let 101 — CANCEL
+    // status: DELAYED (90 min) — uključen u Accumulate 1
+    // delayMinutes = 90 (nije > 120) — nije u Accumulate 2
     // Razlozi: nulta vidljivost + kritična pista + posada prekoračila normu
     // -------------------------------------------------------
     private void initFlight101_Cancel() {
@@ -54,9 +63,10 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         f101.setRoute("BEG-LHR");
         f101.setAircraft(ac101);
         f101.setCategory(FlightCategory.SCHEDULED_COMMERCIAL);
-        f101.setStatus(FlightStatus.SCHEDULED);
-        f101.setPlannedDeparture(LocalDateTime.now().plusHours(2));
-        f101.setPlannedArrival(LocalDateTime.now().plusHours(4));
+        f101.setStatus(FlightStatus.DELAYED);       // IZMENA: SCHEDULED -> DELAYED
+        f101.setDelayMinutes(90);                   // IZMENA: 0 -> 90
+        f101.setPlannedDeparture(LocalDateTime.now());  // danas — uključen u Accumulate 1
+        f101.setPlannedArrival(LocalDateTime.now().plusHours(2));
         f101.setPassengerCount(180);
         f101.setHasReplacementAircraft(false);
         f101.setHasReplacementCrew(false);
@@ -68,14 +78,14 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         w101.setTailwind(25);
         w101.setVisibility(40);           // ZeroVisibility -> TakeoffForbidden
         w101.setTemperature(-5);
-        w101.setDewPoint(-5);            // FrostRisk -> SurfacesContaminated
+        w101.setDewPoint(-5);             // FrostRisk -> SurfacesContaminated
         w101.setPrecipitationType(PrecipitationType.RAIN);
         w101.setPrecipitationIntensity(PrecipitationIntensity.MODERATE);
         w101.setIcingPresent(false);
 
         Runway r101 = new Runway();
         r101.setStatus(RunwayStatus.OPEN);
-        r101.setRwycc(1);                // RunwayCritical -> RunwayProblem
+        r101.setRwycc(1);                 // RunwayCritical -> RunwayProblem
         r101.setRunwaysBeingDeiced(false);
         r101.setDeicingComplete(false);
 
@@ -93,8 +103,8 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         Crew c101 = new Crew();
         c101.setFlightNumber(101);
         c101.setComplete(true);
-        c101.setFdp(14);                 // CrewExceededLimit (day, >13h)
-        c101.setRestBeforeFlight(10);    // InsufficientRest
+        c101.setFdp(14);                  // CrewExceededLimit (day, >13h)
+        c101.setRestBeforeFlight(10);     // InsufficientRest
         c101.setSectorsToday(3);
         c101.setNightDuty(false);
 
@@ -105,11 +115,12 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         crewRepository.put(101, c101);
         alarmsRepository.put(101, new ArrayList<>());
 
-        System.out.println("Flight 101 initialized (expected: CANCEL)");
+        System.out.println("Flight 101 initialized (expected DECISION: CANCEL | accumulate: DELAYED 90min, 180 pax)");
     }
 
     // -------------------------------------------------------
     // Let 202 — DELAY (de-icing)
+    // status: DELAYED (150 min) — uključen u Accumulate 1 i Accumulate 2 (>120)
     // Razlozi: temperatura -5, rosište -5, bez aktivnog leda
     // -------------------------------------------------------
     private void initFlight202_Delay_Deicing() {
@@ -125,9 +136,10 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         f202.setRoute("BEG-CDG");
         f202.setAircraft(ac202);
         f202.setCategory(FlightCategory.SCHEDULED_COMMERCIAL);
-        f202.setStatus(FlightStatus.SCHEDULED);
-        f202.setPlannedDeparture(LocalDateTime.now().plusHours(4));
-        f202.setPlannedArrival(LocalDateTime.now().plusHours(6));
+        f202.setStatus(FlightStatus.DELAYED);       // IZMENA: SCHEDULED -> DELAYED
+        f202.setDelayMinutes(150);                  // IZMENA: 0 -> 150 (>120, uključen u Acc 2)
+        f202.setPlannedDeparture(LocalDateTime.now());  // danas
+        f202.setPlannedArrival(LocalDateTime.now().plusHours(2));
         f202.setPassengerCount(150);
         f202.setHasReplacementAircraft(false);
         f202.setHasReplacementCrew(false);
@@ -139,7 +151,7 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         w202.setTailwind(5);
         w202.setVisibility(3000);
         w202.setTemperature(-5);
-        w202.setDewPoint(-5);            // FrostRisk -> SurfacesContaminated
+        w202.setDewPoint(-5);             // FrostRisk -> SurfacesContaminated
         w202.setPrecipitationType(PrecipitationType.DRY);
         w202.setPrecipitationIntensity(PrecipitationIntensity.NONE);
         w202.setIcingPresent(false);
@@ -176,12 +188,12 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         crewRepository.put(202, c202);
         alarmsRepository.put(202, new ArrayList<>());
 
-        System.out.println("Flight 202 initialized (expected: DELAY - de-icing)");
+        System.out.println("Flight 202 initialized (expected DECISION: DELAY | accumulate: DELAYED 150min, 150 pax, >120 -> affected)");
     }
 
     // -------------------------------------------------------
     // Let 303 — DEPART ON TIME
-    // Sve nominalno
+    // status: ON_TIME — nije ni u jednom accumulate
     // -------------------------------------------------------
     private void initFlight303_DepartOnTime() {
         Aircraft ac303 = new Aircraft();
@@ -196,9 +208,10 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         f303.setRoute("BEG-FRA");
         f303.setAircraft(ac303);
         f303.setCategory(FlightCategory.SCHEDULED_COMMERCIAL);
-        f303.setStatus(FlightStatus.SCHEDULED);
-        f303.setPlannedDeparture(LocalDateTime.now().plusHours(5));
-        f303.setPlannedArrival(LocalDateTime.now().plusHours(7));
+        f303.setStatus(FlightStatus.ON_TIME);       // IZMENA: SCHEDULED -> ON_TIME
+        f303.setDelayMinutes(0);
+        f303.setPlannedDeparture(LocalDateTime.now());
+        f303.setPlannedArrival(LocalDateTime.now().plusHours(2));
         f303.setPassengerCount(160);
         f303.setHasReplacementAircraft(false);
         f303.setHasReplacementCrew(false);
@@ -247,9 +260,13 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         crewRepository.put(303, c303);
         alarmsRepository.put(303, new ArrayList<>());
 
-        System.out.println("Flight 303 initialized (expected: DEPART_ON_TIME)");
+        System.out.println("Flight 303 initialized (expected DECISION: DEPART_ON_TIME | accumulate: nije uključen)");
     }
 
+    // -------------------------------------------------------
+    // Let 404 — GENERAL AVIATION template test
+    // status: CANCELLED — uključen u Accumulate 2
+    // -------------------------------------------------------
     private void initFlight404_GeneralAviation() {
         Aircraft ac404 = new Aircraft();
         ac404.setAge(5);
@@ -263,9 +280,10 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         f404.setRoute("BEG-NIS");
         f404.setAircraft(ac404);
         f404.setCategory(FlightCategory.GENERAL_AVIATION);
-        f404.setStatus(FlightStatus.SCHEDULED);
-        f404.setPlannedDeparture(LocalDateTime.now().plusHours(1));
-        f404.setPlannedArrival(LocalDateTime.now().plusHours(2));
+        f404.setStatus(FlightStatus.CANCELLED);     // IZMENA: SCHEDULED -> CANCELLED
+        f404.setDelayMinutes(0);
+        f404.setPlannedDeparture(LocalDateTime.now());
+        f404.setPlannedArrival(LocalDateTime.now().plusHours(1));
         f404.setPassengerCount(4);
         f404.setHasReplacementAircraft(false);
         f404.setHasReplacementCrew(false);
@@ -294,7 +312,7 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         a404.setTotalRunways(1);
         a404.setAvailableRunways(1);
         a404.setRunwayHeading(90);
-        a404.setRunwayLength(600);
+        a404.setRunwayLength(600);      // ispod minimuma za GENERAL_AVIATION (800m) -> RunwayProblem
         a404.setLvtoCapability(false);
         a404.setLvtoPermit(false);
         a404.setSpecialPermit(false);
@@ -314,9 +332,14 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         crewRepository.put(404, c404);
         alarmsRepository.put(404, new ArrayList<>());
 
-        System.out.println("Flight 404 initialized (GENERAL_AVIATION - template test)");
+        System.out.println("Flight 404 initialized (GENERAL_AVIATION template test | accumulate: CANCELLED -> affected, 4 pax)");
     }
 
+    // -------------------------------------------------------
+    // Let 505 — CANCEL (runway maintenance) / template test
+    // status: DELAYED (45 min) — uključen u Accumulate 1
+    // delayMinutes = 45 (nije > 120) — nije u Accumulate 2
+    // -------------------------------------------------------
     private void initFlight505_RunwayMaintenance() {
         Aircraft ac505 = new Aircraft();
         ac505.setAge(5);
@@ -330,9 +353,10 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         f505.setRoute("BEG-SKP");
         f505.setAircraft(ac505);
         f505.setCategory(FlightCategory.SCHEDULED_COMMERCIAL);
-        f505.setStatus(FlightStatus.SCHEDULED);
-        f505.setPlannedDeparture(LocalDateTime.now().plusHours(1));
-        f505.setPlannedArrival(LocalDateTime.now().plusHours(2));
+        f505.setStatus(FlightStatus.DELAYED);       // IZMENA: SCHEDULED -> DELAYED
+        f505.setDelayMinutes(45);                   // IZMENA: 0 -> 45
+        f505.setPlannedDeparture(LocalDateTime.now());  // danas
+        f505.setPlannedArrival(LocalDateTime.now().plusHours(1));
         f505.setPassengerCount(120);
         f505.setHasReplacementAircraft(false);
         f505.setHasReplacementCrew(false);
@@ -350,7 +374,7 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         w505.setIcingPresent(false);
 
         Runway r505 = new Runway();
-        r505.setStatus(RunwayStatus.MAINTENANCE); // template treba da detektuje ovo
+        r505.setStatus(RunwayStatus.MAINTENANCE);   // template detektuje -> RunwayUnavailable
         r505.setRwycc(6);
         r505.setRunwaysBeingDeiced(false);
         r505.setDeicingComplete(true);
@@ -381,7 +405,6 @@ public class DroolsConsoleDemo implements CommandLineRunner {
         crewRepository.put(505, c505);
         alarmsRepository.put(505, new ArrayList<>());
 
-        System.out.println("Flight 505 initialized (expected: CANCEL - runway in maintenance)");
+        System.out.println("Flight 505 initialized (expected DECISION: CANCEL - runway maintenance | accumulate: DELAYED 45min, 120 pax)");
     }
-
 }

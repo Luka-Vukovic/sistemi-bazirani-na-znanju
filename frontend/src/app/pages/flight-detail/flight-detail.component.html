@@ -1,0 +1,424 @@
+<div class="detail-page" *ngIf="!loading && detail">
+
+  <!-- Header -->
+  <div class="detail-header">
+    <button mat-icon-button (click)="goBack()" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-info">
+      <div class="header-top">
+        <span class="flight-num mono">#{{ detail.flight.flightNumber }}</span>
+        <span class="route mono">{{ detail.flight.route }}</span>
+        <span class="status-badge" [ngClass]="getStatusClass(detail.flight.status)">
+          {{ getStatusLabel(detail.flight.status) }}
+        </span>
+        <span class="category-chip">{{ getCategoryLabel(detail.flight.category) }}</span>
+      </div>
+      <div class="header-times mono">
+        <span><mat-icon>flight_takeoff</mat-icon>{{ detail.flight.plannedDeparture | date:'HH:mm, dd MMM yyyy' }}</span>
+        <span class="time-sep">→</span>
+        <span><mat-icon>flight_land</mat-icon>{{ detail.flight.plannedArrival | date:'HH:mm, dd MMM yyyy' }}</span>
+        <span *ngIf="detail.flight.delayMinutes > 0" class="delay-chip">
+          +{{ detail.flight.delayMinutes }}m delay
+        </span>
+      </div>
+    </div>
+    <button mat-flat-button class="btn-evaluate" (click)="evaluate()" [disabled]="recLoading">
+      <mat-spinner diameter="16" *ngIf="recLoading"></mat-spinner>
+      <mat-icon *ngIf="!recLoading">policy</mat-icon>
+      {{ recLoading ? 'Evaluating...' : 'Run Evaluation' }}
+    </button>
+  </div>
+
+  <!-- CEP Alerts -->
+  <div class="cep-alerts" *ngIf="cepStatus && (cepStatus.weatherDeteriorationAlert || cepStatus.technicalIncident)">
+    <div class="cep-alert weather" *ngIf="cepStatus.weatherDeteriorationAlert">
+      <mat-icon>storm</mat-icon>
+      <strong>CEP ALERT:</strong> Rapid weather deterioration detected — all departures frozen
+    </div>
+    <div class="cep-alert technical" *ngIf="cepStatus.technicalIncident">
+      <mat-icon>warning</mat-icon>
+      <strong>CEP ALERT:</strong> Technical incident detected — aircraft withdrawn from service
+    </div>
+  </div>
+
+  <!-- Recommendation -->
+  <div class="recommendation-section" *ngIf="recommendation">
+    <div class="rec-card">
+      <div class="rec-label">Recommendation</div>
+      <span class="recommendation-badge" [ngClass]="getRecClass(recommendation.action)">
+        <mat-icon>{{ getRecIcon(recommendation.action) }}</mat-icon>
+        {{ recommendation.action | titlecase }}
+      </span>
+      <p class="rec-reason">{{ recommendation.reason }}</p>
+    </div>
+
+    <div class="unmet-section" *ngIf="conditions && conditions.length > 0">
+      <div class="unmet-header">
+        <mat-icon>rule</mat-icon>
+        <span>Unmet Takeoff Conditions ({{ conditions.length }})</span>
+      </div>
+      <div class="unmet-list">
+        <div class="unmet-item" *ngFor="let c of conditions">
+          <div class="unmet-name">
+            <mat-icon>cancel</mat-icon>
+            <span class="mono">{{ c.condition }}</span>
+          </div>
+          <div class="unmet-reason">{{ c.reason }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="all-clear" *ngIf="conditions && conditions.length === 0">
+      <mat-icon>check_circle</mat-icon>
+      All takeoff conditions satisfied
+    </div>
+  </div>
+
+  <!-- Main data grid -->
+  <div class="data-sections">
+
+    <!-- Weather -->
+    <div class="card">
+      <div class="card-header">
+        <mat-icon>cloud</mat-icon>
+        <h3>Weather Report</h3>
+      </div>
+      <div class="data-grid" *ngIf="detail.weather">
+        <div class="data-item">
+          <div class="label">Visibility</div>
+          <div class="value" [ngClass]="getVisibilityClass(detail.weather.visibility)">
+            {{ detail.weather.visibility }}m
+            <span class="val-tag">{{ getVisibilityLabel(detail.weather.visibility) }}</span>
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Wind Speed</div>
+          <div class="value">{{ detail.weather.windSpeed }} km/h</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Wind Direction</div>
+          <div class="value">{{ detail.weather.windDirection }}°</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Crosswind</div>
+          <div class="value" [class.val-critical]="detail.weather.crosswind > 65"
+               [class.val-warning]="detail.weather.crosswind > 28 && detail.weather.crosswind <= 65">
+            {{ detail.weather.crosswind }} km/h
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Tailwind</div>
+          <div class="value" [class.val-critical]="detail.weather.tailwind > 19">
+            {{ detail.weather.tailwind }} km/h
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Temperature</div>
+          <div class="value" [class.val-critical]="detail.weather.temperature < -25"
+               [class.val-warning]="detail.weather.temperature < 0 && detail.weather.temperature >= -25">
+            {{ detail.weather.temperature }}°C
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Dew Point</div>
+          <div class="value">{{ detail.weather.dewPoint }}°C</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Precipitation</div>
+          <div class="value">{{ detail.weather.precipitationType || '—' }}</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Intensity</div>
+          <div class="value">{{ detail.weather.precipitationIntensity || '—' }}</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Icing Present</div>
+          <div class="value" [class.val-critical]="detail.weather.icingPresent">
+            {{ detail.weather.icingPresent ? 'YES' : 'No' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Runway -->
+    <div class="card">
+      <div class="card-header">
+        <mat-icon>flight_takeoff</mat-icon>
+        <h3>Runway & Airport</h3>
+      </div>
+      <div class="data-grid">
+        <div class="data-item" *ngIf="detail.runway">
+          <div class="label">Runway Status</div>
+          <div class="value" [class.val-critical]="detail.runway.status !== 'OPEN'">
+            {{ detail.runway.status }}
+          </div>
+        </div>
+        <div class="data-item" *ngIf="detail.runway">
+          <div class="label">RWYCC</div>
+          <div class="value" [ngClass]="getRwyccClass(detail.runway.rwycc)">
+            {{ detail.runway.rwycc }} — {{ getRwyccLabel(detail.runway.rwycc) }}
+          </div>
+        </div>
+        <div class="data-item" *ngIf="detail.runway">
+          <div class="label">De-icing Complete</div>
+          <div class="value">{{ detail.runway.deicingComplete ? 'Yes' : 'No' }}</div>
+        </div>
+        <div class="data-item" *ngIf="detail.airport">
+          <div class="label">Runway Length</div>
+          <div class="value">{{ detail.airport.runwayLength }}m</div>
+        </div>
+        <div class="data-item" *ngIf="detail.airport">
+          <div class="label">Available Runways</div>
+          <div class="value"
+               [class.val-critical]="detail.airport.availableRunways / detail.airport.totalRunways < 0.5">
+            {{ detail.airport.availableRunways }} / {{ detail.airport.totalRunways }}
+          </div>
+        </div>
+        <div class="data-item" *ngIf="detail.airport">
+          <div class="label">Free Gates</div>
+          <div class="value" [class.val-critical]="detail.airport.freeGates === 0"
+               [class.val-warning]="detail.airport.freeGates <= 2 && detail.airport.freeGates > 0">
+            {{ detail.airport.freeGates }}
+          </div>
+        </div>
+        <div class="data-item" *ngIf="detail.airport">
+          <div class="label">LVTO Capability</div>
+          <div class="value" [class.val-critical]="!detail.airport.lvtoCapability">
+            {{ detail.airport.lvtoCapability ? 'Available' : 'Not Available' }}
+          </div>
+        </div>
+        <div class="data-item" *ngIf="detail.airport">
+          <div class="label">LVTO Permit</div>
+          <div class="value" [class.val-critical]="!detail.airport.lvtoPermit">
+            {{ detail.airport.lvtoPermit ? 'Valid' : 'Not Valid' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aircraft -->
+    <div class="card">
+      <div class="card-header">
+        <mat-icon>airplanemode_active</mat-icon>
+        <h3>Aircraft</h3>
+      </div>
+      <div class="data-grid" *ngIf="detail.flight.aircraft">
+        <div class="data-item">
+          <div class="label">Age</div>
+          <div class="value" [class.val-warning]="detail.flight.aircraft.age > 20"
+               [class.val-critical]="detail.flight.aircraft.age > 25">
+            {{ detail.flight.aircraft.age }} years
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Flight Hours (total)</div>
+          <div class="value">{{ detail.flight.aircraft.totalFlightHours }}h</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Hours Since Service</div>
+          <div class="value" [class.val-warning]="detail.flight.aircraft.flightHoursSinceService > 500"
+               [class.val-critical]="detail.flight.aircraft.flightHoursSinceService > 600">
+            {{ detail.flight.aircraft.flightHoursSinceService }}h
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Cycles Since Service</div>
+          <div class="value" [class.val-warning]="detail.flight.aircraft.cyclesSinceService > 250"
+               [class.val-critical]="detail.flight.aircraft.cyclesSinceService > 300">
+            {{ detail.flight.aircraft.cyclesSinceService }}
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Next Service</div>
+          <div class="value">{{ detail.flight.aircraft.nextServiceDate | date:'dd MMM yyyy' }}</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Replacement Aircraft</div>
+          <div class="value">{{ detail.flight.hasReplacementAircraft ? 'Available' : 'None' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crew -->
+    <div class="card">
+      <div class="card-header">
+        <mat-icon>people</mat-icon>
+        <h3>Crew</h3>
+      </div>
+      <div class="data-grid" *ngIf="detail.crew">
+        <div class="data-item">
+          <div class="label">Status</div>
+          <div class="value" [class.val-critical]="!detail.crew.complete">
+            {{ detail.crew.complete ? 'Complete' : 'INCOMPLETE' }}
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">FDP</div>
+          <div class="value"
+               [class.val-critical]="detail.crew.fdp > 13"
+               [class.val-warning]="detail.crew.fdp > 10 && detail.crew.fdp <= 13">
+            {{ detail.crew.fdp }}h
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Rest Before Flight</div>
+          <div class="value" [class.val-critical]="detail.crew.restBeforeFlight < 12">
+            {{ detail.crew.restBeforeFlight }}h
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Sectors Today</div>
+          <div class="value" [class.val-warning]="detail.crew.sectorsToday >= 6">
+            {{ detail.crew.sectorsToday }}
+          </div>
+        </div>
+        <div class="data-item">
+          <div class="label">Night Duty</div>
+          <div class="value">{{ detail.crew.nightDuty ? 'Yes' : 'No' }}</div>
+        </div>
+        <div class="data-item">
+          <div class="label">Replacement Crew</div>
+          <div class="value">{{ detail.flight.hasReplacementCrew ? 'Available' : 'None' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Alarms -->
+    <div class="card alarms-card">
+      <div class="card-header">
+        <mat-icon>warning_amber</mat-icon>
+        <h3>Technical Alarms</h3>
+        <span class="alarm-count" *ngIf="hasActiveAlarms()">
+          {{ getAlarmCountEntries().length }} severity level(s) active
+        </span>
+      </div>
+
+      <!-- Alarm counts iz CEP sesije -->
+      <div *ngIf="!hasActiveAlarms()" class="no-alarms">
+        <mat-icon>check_circle_outline</mat-icon>
+        No active alarms registered via CEP
+      </div>
+
+      <div class="alarm-counts" *ngIf="hasActiveAlarms()">
+        <div class="alarm-count-item" *ngFor="let entry of getAlarmCountEntries()">
+          <span class="severity-badge" [ngClass]="entry.cls">{{ entry.key }}</span>
+          <span class="count-value mono">× {{ entry.value }}</span>
+          <span class="count-label">
+            {{ entry.value === 1 ? 'alarm' : 'alarms' }} registered
+          </span>
+        </div>
+      </div>
+
+      <!-- Statički alarmi iz repozitorijuma (ako postoje) -->
+      <div *ngIf="detail.alarms?.length > 0" class="static-alarms">
+        <div class="static-alarms-title">Pre-configured Alarms</div>
+        <div class="alarm-list">
+          <div class="alarm-item" *ngFor="let alarm of detail.alarms">
+            <div class="alarm-icon-col">
+              <mat-icon>warning</mat-icon>
+            </div>
+            <div class="alarm-body">
+              <div class="alarm-top-row">
+                <span class="alarm-component">{{ alarm.component }}</span>
+                <span class="severity-badge" [ngClass]="alarm.severity?.toLowerCase()">
+                  {{ alarm.severity }}
+                </span>
+                <span class="mel-badge">{{ getMelLabel(alarm.melCategory) }}</span>
+              </div>
+              <div class="alarm-meta">
+                <span>{{ alarm.alarmType }}</span>
+                <span class="dot">·</span>
+                <span>{{ alarm.status }}</span>
+                <span class="dot">·</span>
+                <span class="mono">{{ alarm.reportedAt | date:'HH:mm dd/MM' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card cep-card">
+      <div class="card-header">
+        <mat-icon>sensors</mat-icon>
+        <h3>CEP Event Stream</h3>
+      </div>
+
+      <div class="cep-status-row">
+        <div class="cep-indicator" [class.active]="cepStatus?.weatherDeteriorationAlert">
+          <mat-icon>storm</mat-icon>
+          <span>Weather Deterioration</span>
+          <span class="indicator-dot" [class.on]="cepStatus?.weatherDeteriorationAlert"></span>
+        </div>
+        <div class="cep-indicator" [class.active]="cepStatus?.technicalIncident">
+          <mat-icon>warning</mat-icon>
+          <span>Technical Incident</span>
+          <span class="indicator-dot" [class.on]="cepStatus?.technicalIncident"></span>
+        </div>
+      </div>
+
+      <div class="cep-controls">
+        <div class="cep-section">
+          <div class="cep-section-title">Send Weather Event</div>
+          <div class="cep-form">
+            <div class="cep-field">
+              <label>Wind Speed (km/h)</label>
+              <input type="number" [(ngModel)]="weatherForm.windSpeed" class="cep-input mono" />
+            </div>
+            <div class="cep-field">
+              <label>Visibility (m)</label>
+              <input type="number" [(ngModel)]="weatherForm.visibility" class="cep-input mono" />
+            </div>
+            <div class="cep-field">
+              <label>Temperature (°C)</label>
+              <input type="number" [(ngModel)]="weatherForm.temperature" class="cep-input mono" />
+            </div>
+            <button mat-stroked-button (click)="sendWeather()" [disabled]="cepLoading" class="cep-btn">
+              <mat-icon>send</mat-icon> Send
+            </button>
+          </div>
+        </div>
+
+        <div class="cep-divider"></div>
+
+        <div class="cep-section">
+          <div class="cep-section-title">Send Technical Alarm</div>
+          <div class="cep-form alarm-form">
+            <div class="cep-field severity-field">
+              <label>Severity</label>
+              <select [(ngModel)]="alarmSeverity" class="cep-select mono">
+                <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+            <button mat-stroked-button (click)="sendAlarm()" [disabled]="cepLoading" class="cep-btn"
+                    [ngClass]="'alarm-btn-' + alarmSeverity.toLowerCase()">
+              <mat-icon>notification_important</mat-icon> Send Alarm
+            </button>
+          </div>
+          <div class="alarm-sent-counts" *ngIf="cepStatus?.alarmCounts">
+            <span class="sent-label">Sent this session:</span>
+            <ng-container *ngFor="let sev of severityOptions">
+              <span class="sent-count severity-badge"
+                    [ngClass]="sev.toLowerCase()"
+                    *ngIf="cepStatus.alarmCounts[sev] > 0">
+                {{ sev }} ×{{ cepStatus.alarmCounts[sev] }}
+              </span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="loading-page" *ngIf="loading">
+  <mat-spinner diameter="36"></mat-spinner>
+  <span>Loading flight data...</span>
+</div>
+
+<div class="error-page" *ngIf="error && !loading">
+  <mat-icon>error_outline</mat-icon>
+  <p>{{ error }}</p>
+  <button mat-stroked-button (click)="goBack()">Back to Flights</button>
+</div>

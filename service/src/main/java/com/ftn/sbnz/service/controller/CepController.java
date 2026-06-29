@@ -13,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cep")
+@CrossOrigin(origins = "http://localhost:4200")
 public class CepController {
 
     @Autowired
@@ -31,12 +32,7 @@ public class CepController {
 
         cepService.sendWeatherEvent(flightNumber, flight, windSpeed, visibility, temperature);
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("flightNumber", flightNumber);
-        response.put("weatherDeteriorationAlert", cepService.hasWeatherDeteriorationAlert(flightNumber));
-        response.put("technicalIncident", cepService.hasTechnicalIncident(flightNumber));
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildResponse(flightNumber));
     }
 
     @PostMapping("/{flightNumber}/alarm")
@@ -50,20 +46,20 @@ public class CepController {
 
         cepService.sendAlarmEvent(flightNumber, flight, severity);
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("flightNumber", flightNumber);
-        response.put("weatherDeteriorationAlert", cepService.hasWeatherDeteriorationAlert(flightNumber));
-        response.put("technicalIncident", cepService.hasTechnicalIncident(flightNumber));
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildResponse(flightNumber));
     }
 
     @GetMapping("/{flightNumber}/status")
     public ResponseEntity<?> getCepStatus(@PathVariable int flightNumber) {
+        return ResponseEntity.ok(buildResponse(flightNumber));
+    }
+
+    private Map<String, Object> buildResponse(int flightNumber) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("flightNumber", flightNumber);
         response.put("weatherDeteriorationAlert", cepService.hasWeatherDeteriorationAlert(flightNumber));
         response.put("technicalIncident", cepService.hasTechnicalIncident(flightNumber));
-        return ResponseEntity.ok(response);
+        response.put("alarmCounts", cepService.getAlarmCounts(flightNumber));
+        return response;
     }
 }

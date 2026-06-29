@@ -1,0 +1,35 @@
+template header
+severity
+maxAllowedAlarms
+reactionTimeMin
+blockTakeoff
+requireService
+
+package rules;
+
+import com.ftn.sbnz.model.Flight;
+import com.ftn.sbnz.model.events.TechnicalAlarmEvent;
+import com.ftn.sbnz.model.enums.AlarmSeverity;
+import com.ftn.sbnz.model.facts.TechnicalIncident;
+import com.ftn.sbnz.model.facts.AircraftNotReady;
+
+template "alarmSeverityLimits"
+
+rule "CEP - Technical Incident - @{severity}"
+when
+    $f : Flight($fn : flightNumber)
+    Number(intValue >= @{maxAllowedAlarms}) from accumulate(
+        $e : TechnicalAlarmEvent(
+            flightNumber == $fn,
+            severity == AlarmSeverity.@{severity}
+        ) over window:time(15m),
+        count($e)
+    )
+then
+    TechnicalIncident fact = new TechnicalIncident();
+    fact.setFlightNumber($fn);
+    insert(fact);
+    System.out.println(">>> [CEP - TEMPLATE] Flight #" + $fn + ": Technical incident - @{severity} alarm threshold reached (@{maxAllowedAlarms} in 15 minutes)");
+end
+
+end template

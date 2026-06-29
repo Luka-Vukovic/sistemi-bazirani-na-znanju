@@ -7,4 +7,8 @@
         <ksession name="ksession-rules" type="stateful" clockType="realtime"/>
     </kbase>
 
+    <kbase name="accumulate-rules" packages="rules.accumulate">
+        <ksession name="ksession-accumulate" type="stateful"/>
+    </kbase>
+
 </kmodule>

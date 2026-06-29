@@ -11,11 +11,11 @@ import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -67,6 +67,28 @@ public class CepService {
                 o instanceof TechnicalIncident &&
                 ((TechnicalIncident) o).getFlightNumber() == flightNumber);
         return !incidents.isEmpty();
+    }
+
+    public Map<String, Long> getAlarmCounts(int flightNumber) {
+        KieSession kSession = sessions.get(flightNumber);
+        Map<String, Long> counts = new LinkedHashMap<>(); // Ovde se koristi
+        counts.put("LOW", 0L);
+        counts.put("MEDIUM", 0L);
+        counts.put("HIGH", 0L);
+        counts.put("CRITICAL", 0L);
+
+        if (kSession == null) return counts;
+
+        for (AlarmSeverity sev : AlarmSeverity.values()) {
+            final AlarmSeverity s = sev;
+            long count = kSession.getObjects(o ->
+                o instanceof TechnicalAlarmEvent &&
+                ((TechnicalAlarmEvent) o).getSeverity() == s &&
+                ((TechnicalAlarmEvent) o).getFlightNumber() == flightNumber
+            ).size();
+            counts.put(sev.name(), count);
+        }
+        return counts;
     }
 
     @PreDestroy

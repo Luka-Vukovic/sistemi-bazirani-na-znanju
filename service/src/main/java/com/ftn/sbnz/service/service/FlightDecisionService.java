@@ -1,6 +1,7 @@
 package com.ftn.sbnz.service.service;
 
 import com.ftn.sbnz.model.*;
+import com.ftn.sbnz.model.dto.AccumulateReportDTO;
 import com.ftn.sbnz.model.dto.FlightReportDTO;
 import com.ftn.sbnz.model.dto.UnmetConditionDTO;
 import com.ftn.sbnz.model.facts.TechnicalIncident;
@@ -31,6 +32,8 @@ public class FlightDecisionService {
     @Autowired
     private CepService cepService;
 
+    // ==================== POSTOJEĆE METODE ====================
+
     private KieSession buildAndFire(Flight flight, WeatherReport weather, Runway runway,
                                     Airport airport, Crew crew, List<TechnicalAlarm> alarms) {
         KieSession kSession = kieContainer.newKieSession("ksession-rules");
@@ -60,6 +63,20 @@ public class FlightDecisionService {
             kSession.insert(alert);
             logger.info("CEP: WeatherDeteriorationAlert injected for flight {}", fn);
         }
+
+        System.out.println("=== DEBUG: Objects in accumulate session ===");
+        kSession.getObjects(o -> o instanceof Flight).forEach(f -> {
+            Flight fl = (Flight) f;
+            System.out.println("Flight " + fl.getFlightNumber() + 
+                " | status=" + fl.getStatus() + 
+                " | delayMin=" + fl.getDelayMinutes() + 
+                " | departure=" + fl.getPlannedDeparture());
+        });
+        kSession.getObjects(o -> o instanceof WeatherReport).forEach(w -> {
+            WeatherReport wr = (WeatherReport) w;
+            System.out.println("WeatherReport | visibility=" + wr.getVisibility());
+        });
+        System.out.println("=== END DEBUG ===");
 
         kSession.fireAllRules();
         return kSession;
@@ -112,5 +129,46 @@ public class FlightDecisionService {
         kSession.dispose();
 
         return new FlightReportDTO(flight, weather, runway, recommendation, unmetConditions);
+    }
+
+    // ==================== ACCUMULATE ====================
+
+    /**
+     * Kreira sesiju sa svim letovima i njihovim WeatherReport-ovima,
+     * pali accumulate pravila i vraća agregiran izveštaj.
+     *
+     * @param flightDataList lista FlightData wrappera (let + weather po letu)
+     * @return AccumulateReportDTO sa svim agregiranim vrednostima
+     */
+    public AccumulateReportDTO generateAccumulateReport(List<FlightData> flightDataList) {
+        logger.info("=== ACCUMULATE: {} flights ===", flightDataList.size());
+
+        // Koristi odvojenu sesiju koja sadrži SAMO accumulate.drl
+        KieSession kSession = kieContainer.newKieSession("ksession-accumulate");
+        kSession.addEventListener(new ConsoleAgendaEventListener());
+
+        for (FlightData fd : flightDataList) {
+            kSession.insert(fd.getFlight());
+            kSession.insert(fd.getWeather());
+        }
+
+        kSession.fireAllRules();
+
+        Collection<?> results = kSession.getObjects(o -> o instanceof AccumulateResult);
+        AccumulateReportDTO report = new AccumulateReportDTO();
+
+        if (!results.isEmpty()) {
+            AccumulateResult result = (AccumulateResult) results.iterator().next();
+            report.setTotalDelayMinutes(result.getTotalDelayMinutes());
+            report.setDelayedFlightsCount(result.getDelayedFlightsCount());
+            report.setAffectedPassengers(result.getAffectedPassengers());
+            report.setAvgVisibility(result.getAvgVisibility());
+            logger.info("Accumulate result: {}", result);
+        } else {
+            logger.warn("No AccumulateResult generated — no matching flights in session.");
+        }
+
+        kSession.dispose();
+        return report;
     }
 }

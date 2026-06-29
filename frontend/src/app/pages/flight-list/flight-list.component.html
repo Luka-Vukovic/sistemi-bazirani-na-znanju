@@ -1,0 +1,148 @@
+<div class="page-header">
+  <div class="page-title-row">
+    <h1>Flight Operations</h1>
+    <span class="flight-count mono" *ngIf="!loading">{{ dataSource.data.length }} flights</span>
+  </div>
+  <div class="page-actions">
+    <div class="date-control">
+      <mat-icon>calendar_today</mat-icon>
+      <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" class="date-input mono" />
+    </div>
+    <button class="btn-icon" (click)="load()" [disabled]="loading">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button class="btn-secondary" (click)="openAccumulate()">
+      <mat-icon>analytics</mat-icon> Summary
+    </button>
+    <button class="btn-primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon> New Flight
+    </button>
+  </div>
+</div>
+
+<div class="table-card" *ngIf="!error">
+  <div class="loading-overlay" *ngIf="loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Loading flights...</span>
+  </div>
+
+  <table mat-table [dataSource]="dataSource" matSort class="flights-table" *ngIf="!loading">
+
+    <ng-container matColumnDef="flightNumber">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Flight</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="flight-number mono">#{{ row.flightNumber }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="route">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Route</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="route mono">{{ row.route }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef>Category</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="category-label">{{ getCategoryLabel(row.category) }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="departure">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Departure</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="mono time">{{ row.plannedDeparture | date:'HH:mm' }}</span>
+        <span class="date-sub">{{ row.plannedDeparture | date:'dd MMM' }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="arrival">
+      <th mat-header-cell *matHeaderCellDef>Arrival</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="mono time">{{ row.plannedArrival | date:'HH:mm' }}</span>
+        <span class="date-sub">{{ row.plannedArrival | date:'dd MMM' }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+      <td mat-cell *matCellDef="let row">
+        <span class="status-badge" [ngClass]="getStatusClass(row.status)">
+          {{ getStatusLabel(row.status) }}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="delay">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Delay</th>
+      <td mat-cell *matCellDef="let row">
+        <span *ngIf="row.delayMinutes > 0" class="delay-value mono"
+              [class.delay-high]="row.delayMinutes > 120">
+          +{{ row.delayMinutes }}m
+        </span>
+        <span *ngIf="!row.delayMinutes || row.delayMinutes === 0" class="text-muted">—</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="weather">
+      <th mat-header-cell *matHeaderCellDef>Weather</th>
+      <td mat-cell *matCellDef="let row">
+        <div class="weather-cell">
+          <span class="weather-item" [ngClass]="getVisibilityClass(row.visibility)">
+            <mat-icon>visibility</mat-icon>{{ row.visibility }}m
+          </span>
+          <span class="weather-item">
+            <mat-icon>air</mat-icon>{{ row.windSpeed }}km/h
+          </span>
+          <span class="weather-item" [class.val-critical]="row.temperature < -25"
+                [class.val-warning]="row.temperature < 0 && row.temperature >= -25">
+            <mat-icon>thermostat</mat-icon>{{ row.temperature }}°C
+          </span>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="runway">
+      <th mat-header-cell *matHeaderCellDef>Runway</th>
+      <td mat-cell *matCellDef="let row">
+        <div class="runway-cell">
+          <span class="runway-status" [class.rwy-closed]="row.runwayStatus !== 'OPEN'">
+            {{ row.runwayStatus }}
+          </span>
+          <span class="rwycc-badge" [ngClass]="getRwyccClass(row.rwycc)">
+            RWYCC {{ row.rwycc }}
+          </span>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let row" class="actions-cell">
+        <button class="action-btn" (click)="openFlight(row, $event)">
+          <mat-icon>open_in_new</mat-icon>
+        </button>
+        <button class="action-btn" (click)="openEdit(row, $event)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button class="action-btn danger" (click)="openDelete(row, $event)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="data-row"></tr>
+  </table>
+
+  <mat-paginator [pageSizeOptions]="[5, 10, 25]" pageSize="10"
+                 showFirstLastButtons *ngIf="!loading">
+  </mat-paginator>
+</div>
+
+<div class="error-state" *ngIf="error">
+  <mat-icon>cloud_off</mat-icon>
+  <p>{{ error }}</p>
+  <button class="btn-secondary" (click)="load()">Retry</button>
+</div>
